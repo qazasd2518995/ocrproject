@@ -3,16 +3,6 @@
   "name": "yuan-zheng-shan-ocr",
   "cleanUrls": true,
   "trailingSlash": false,
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/main",
-      "dest": "/main.html"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",

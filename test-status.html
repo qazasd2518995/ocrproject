@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>API 狀態測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .status-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>OCR.space API 狀態測試</h1>
+    <p>API Key: K87802744288957</p>
+    
+    <div class="status-box">
+        <h3>本地儲存的使用數據：</h3>
+        <div id="localData"></div>
+    </div>
+    
+    <button onclick="testUsage()">模擬增加使用次數</button>
+    <button onclick="clearData()">清除本地數據</button>
+    <button onclick="checkStatus()">檢查 API 狀態</button>
+    
+    <div class="status-box">
+        <h3>測試結果：</h3>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // API 狀態管理類別（簡化版）
+        class TestAPIStatus {
+            constructor() {
+                this.apiKey = 'K87802744288957';
+                this.maxMonthlyLimit = 25000;
+                this.loadData();
+            }
+            
+            loadData() {
+                const saved = localStorage.getItem('ocrApiUsage');
+                if (saved) {
+                    this.data = JSON.parse(saved);
+                } else {
+                    this.data = {
+                        today: 0,
+                        month: 0,
+                        remaining: 25000,
+                        lastChecked: new Date().toISOString()
+                    };
+                }
+                this.display();
+            }
+            
+            saveData() {
+                this.data.lastChecked = new Date().toISOString();
+                localStorage.setItem('ocrApiUsage', JSON.stringify(this.data));
+                this.display();
+            }
+            
+            increment() {
+                this.data.today++;
+                this.data.month++;
+                this.data.remaining = Math.max(0, this.maxMonthlyLimit - this.data.month);
+                this.saveData();
+            }
+            
+            display() {
+                document.getElementById('localData').innerHTML = `
+                    <div class="status-item">今日使用：${this.data.today} 次</div>
+                    <div class="status-item">本月使用：${this.data.month} 次</div>
+                    <div class="status-item">剩餘額度：${this.data.remaining} 次</div>
+                    <div class="status-item">上次更新：${new Date(this.data.lastChecked).toLocaleString('zh-TW')}</div>
+                    <div class="status-item">使用率：${((this.data.month / this.maxMonthlyLimit) * 100).toFixed(2)}%</div>
+                `;
+            }
+        }
+        
+        const manager = new TestAPIStatus();
+        
+        function testUsage() {
+            manager.increment();
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ 已增加一次使用記錄</p>';
+        }
+        
+        function clearData() {
+            localStorage.removeItem('ocrApiUsage');
+            manager.loadData();
+            document.getElementById('result').innerHTML = '<p style="color: blue;">🔄 已清除本地數據</p>';
+        }
+        
+        async function checkStatus() {
+            document.getElementById('result').innerHTML = '<p>檢查中...</p>';
+            
+            try {
+                // 測試小圖片
+                const testImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+                
+                const base64Data = testImage.split(',')[1];
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], {type: 'image/png'});
+                
+                const formData = new FormData();
+                formData.append('file', blob, 'test.png');
+                formData.append('apikey', manager.apiKey);
+                formData.append('language', 'eng');
+                
+                const response = await fetch('https://api.ocr.space/parse/image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && !result.IsErroredOnProcessing) {
+                    document.getElementById('result').innerHTML = `
+                        <p style="color: green;">✅ API 連接成功</p>
+                        <p>處理時間：${result.ProcessingTimeInMilliseconds}ms</p>
+                    `;
+                    manager.increment(); // 測試也算一次使用
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <p style="color: red;">❌ API 錯誤</p>
+                        <p>${result.ErrorMessage || '未知錯誤'}</p>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <p style="color: red;">❌ 連接失敗</p>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

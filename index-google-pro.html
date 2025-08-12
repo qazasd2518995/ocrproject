@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>源正山鋼索五金行 - 專業 OCR 辨識系統</title>
+    <link rel="stylesheet" href="css/style-pro.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 頂部導航欄 -->
+        <nav class="navbar">
+            <div class="nav-content">
+                <div class="logo-section">
+                    <div class="logo">
+                        <svg viewBox="0 0 40 40" class="logo-icon">
+                            <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 20L18 26L28 14" stroke="currentColor" stroke-width="2" fill="none"/>
+                        </svg>
+                        <span class="company-name">源正山鋼索五金行</span>
+                    </div>
+                    <span class="system-badge">專業 OCR 系統</span>
+                </div>
+                <div class="api-status-bar">
+                    <div class="status-item">
+                        <span class="status-dot active"></span>
+                        <span>OCR.space API</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-dot active"></span>
+                        <span>Google Vision API</span>
+                    </div>
+                    <button class="history-btn" id="historyBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        歷史記錄
+                    </button>
+                    <button class="logout-btn" id="logoutBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        登出
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主要內容區 -->
+        <div class="content-wrapper">
+            <!-- 左側：上傳和預覽區 -->
+            <div class="left-panel">
+                <!-- 上傳區 -->
+                <div class="upload-container" id="uploadContainer">
+                    <div class="upload-box" id="uploadBox">
+                        <div class="upload-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3-3m0 0l3 3m-3-3v12"/>
+                            </svg>
+                        </div>
+                        <h3>拖放檔案或點擊上傳</h3>
+                        <p class="upload-info">支援 JPG、PNG、HEIC、PDF 格式</p>
+                        <p class="file-size-info">最大檔案大小：10MB</p>
+                        <input type="file" id="fileInput" accept="image/*,.pdf,.heic" hidden>
+                    </div>
+                </div>
+
+                <!-- 預覽區 -->
+                <div class="preview-container" id="previewContainer" style="display: none;">
+                    <div class="preview-header">
+                        <h3>原始檔案預覽</h3>
+                        <button class="btn-icon" id="removeFileBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M6 18L18 6M6 6l12 12" stroke-width="2"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="preview-content">
+                        <img id="previewImage" alt="預覽圖片">
+                        <canvas id="pdfCanvas" style="display: none;"></canvas>
+                    </div>
+                    <div class="file-info" id="fileInfo"></div>
+                </div>
+            </div>
+
+            <!-- 右側：處理和結果區 -->
+            <div class="right-panel">
+                <!-- 處理進度 -->
+                <div class="process-container" id="processContainer" style="display: none;">
+                    <h3>處理進度</h3>
+                    <div class="ocr-engines">
+                        <!-- OCR.space -->
+                        <div class="engine-card">
+                            <div class="engine-header">
+                                <div class="engine-info">
+                                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234CAF50'%3E%3Cpath d='M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E" alt="OCR.space" class="engine-logo">
+                                    <div>
+                                        <h4>OCR.space API</h4>
+                                        <span class="engine-desc">雲端高精度辨識</span>
+                                    </div>
+                                </div>
+                                <div class="engine-status" id="ocrSpaceStatus">
+                                    <span class="processing-spinner" style="display: none;"></span>
+                                    <span class="status-text">準備中...</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="ocrSpaceProgress"></div>
+                            </div>
+                            <div class="engine-stats" id="ocrSpaceStats" style="display: none;">
+                                <span class="stat-time">處理時間: <span id="ocrSpaceTime">--</span></span>
+                                <span class="stat-confidence">準確度: <span id="ocrSpaceConfidence">--</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Google Vision -->
+                        <div class="engine-card">
+                            <div class="engine-header">
+                                <div class="engine-info">
+                                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234285f4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/%3E%3Cpath fill='%2334a853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/%3E%3Cpath fill='%23fbbc05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/%3E%3Cpath fill='%23ea4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/%3E%3C/svg%3E" alt="Google Vision" class="engine-logo">
+                                    <div>
+                                        <h4>Google Vision API</h4>
+                                        <span class="engine-desc">AI 智能辨識引擎</span>
+                                    </div>
+                                </div>
+                                <div class="engine-status" id="googleVisionStatus">
+                                    <span class="processing-spinner" style="display: none;"></span>
+                                    <span class="status-text">準備中...</span>
+                                </div>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="googleVisionProgress"></div>
+                            </div>
+                            <div class="engine-stats" id="googleVisionStats" style="display: none;">
+                                <span class="stat-time">處理時間: <span id="googleVisionTime">--</span></span>
+                                <span class="stat-confidence">準確度: <span id="googleVisionConfidence">--</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 結果顯示區 -->
+                <div class="results-container" id="resultsContainer" style="display: none;">
+                    <div class="results-header">
+                        <h3>辨識結果</h3>
+                        <div class="result-tabs">
+                            <button class="tab-btn active" data-engine="ocrspace">OCR.space</button>
+                            <button class="tab-btn" data-engine="googlevision">Google Vision</button>
+                            <button class="tab-btn" data-engine="compare">比較模式</button>
+                        </div>
+                    </div>
+
+                    <!-- OCR.space 結果 -->
+                    <div class="result-panel active" id="ocrspaceResult">
+                        <div class="result-toolbar">
+                            <button class="btn-sm" onclick="copyText('ocrspaceText')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                                複製
+                            </button>
+                            <button class="btn-sm" onclick="downloadText('ocrspaceText', 'OCRspace')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                下載
+                            </button>
+                        </div>
+                        <div class="result-text" id="ocrspaceText" contenteditable="true" spellcheck="false">
+                            等待辨識...
+                        </div>
+                    </div>
+
+                    <!-- Google Vision 結果 -->
+                    <div class="result-panel" id="googlevisionResult">
+                        <div class="result-toolbar">
+                            <button class="btn-sm" onclick="copyText('googlevisionText')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                                複製
+                            </button>
+                            <button class="btn-sm" onclick="downloadText('googlevisionText', 'GoogleVision')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                下載
+                            </button>
+                        </div>
+                        <div class="result-text" id="googlevisionText" contenteditable="true" spellcheck="false">
+                            等待辨識...
+                        </div>
+                    </div>
+
+                    <!-- 比較模式 -->
+                    <div class="result-panel" id="compareResult">
+                        <div class="compare-container">
+                            <div class="compare-side">
+                                <h4>OCR.space</h4>
+                                <div class="compare-text" id="compareOcrspace"></div>
+                            </div>
+                            <div class="compare-divider"></div>
+                            <div class="compare-side">
+                                <h4>Google Vision</h4>
+                                <div class="compare-text" id="compareGooglevision"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 動作按鈕 -->
+                    <div class="action-buttons">
+                        <button class="btn-primary" id="processNewBtn">處理新檔案</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 歷史記錄 Modal -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>掃描歷史記錄</h2>
+                <button class="modal-close" id="closeHistoryBtn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="history-controls">
+                    <input type="text" id="searchHistory" placeholder="搜尋歷史記錄..." class="search-input">
+                    <button class="btn-danger" id="clearHistoryBtn">清除所有記錄</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <!-- 歷史記錄會動態載入這裡 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/google-vision-pro.js"></script>
+</body>
+</html>

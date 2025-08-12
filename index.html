@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>源正山鋼索五金行 - 帳單辨識系統</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- 多個OCR引擎選項 -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- 圖片預處理庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jimp/0.16.1/jimp.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>源正山鋼索五金行</h1>
+            <h2>智能帳單辨識系統 - 進階版</h2>
+        </header>
+
+        <!-- OCR引擎選擇 -->
+        <div class="engine-selection">
+            <h3>選擇OCR引擎</h3>
+            <div class="engine-options">
+                <label class="engine-option">
+                    <input type="radio" name="ocrEngine" value="tesseract" checked>
+                    <span>Tesseract (本地處理)</span>
+                    <small>Google開源引擎，支援繁體中文</small>
+                </label>
+                <label class="engine-option">
+                    <input type="radio" name="ocrEngine" value="tesseract-enhanced">
+                    <span>Tesseract 增強版</span>
+                    <small>加入圖片預處理，提升辨識率</small>
+                </label>
+                <label class="engine-option">
+                    <input type="radio" name="ocrEngine" value="ocr-space">
+                    <span>OCR.space API (雲端處理)</span>
+                    <small>最高辨識率，每月 25000 次免費</small>
+                </label>
+            </div>
+            <!-- API Key 輸入框 -->
+            <div class="api-key-section" id="apiKeySection" style="display: none;">
+                <label for="apiKeyInput">OCR.space API Key:</label>
+                <input type="text" id="apiKeyInput" value="K87802744288957" placeholder="輸入您的 API Key">
+                <small style="color: green; display: block; margin-top: 5px;">✅ API Key 已設定</small>
+                
+                <!-- API 使用狀態 -->
+                <div class="api-status" id="apiStatus">
+                    <h4>API 使用狀態</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">今日使用：</span>
+                            <span class="status-value" id="todayUsage">載入中...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">本月使用：</span>
+                            <span class="status-value" id="monthUsage">載入中...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">剩餘額度：</span>
+                            <span class="status-value" id="remainingCalls">載入中...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">狀態：</span>
+                            <span class="status-value" id="apiStatusText">檢查中...</span>
+                        </div>
+                    </div>
+                    <div class="usage-bar">
+                        <div class="usage-fill" id="usageFill"></div>
+                    </div>
+                    <button class="btn-check-status" onclick="checkAPIStatus()">重新檢查狀態</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 圖片預處理選項 -->
+        <div class="preprocess-options" id="preprocessOptions" style="display: none;">
+            <h4>圖片增強選項</h4>
+            <div class="option-group">
+                <label><input type="checkbox" id="enhanceContrast" checked> 增強對比度</label>
+                <label><input type="checkbox" id="removeNoise" checked> 去除雜訊</label>
+                <label><input type="checkbox" id="binarize" checked> 二值化處理</label>
+                <label><input type="checkbox" id="deskew"> 自動校正傾斜</label>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p class="upload-text">拖放檔案到此處或點擊選擇</p>
+                <p class="upload-hint">支援 JPG、PNG、PDF 格式</p>
+                <input type="file" id="fileInput" accept="image/*,.pdf,.heic" hidden>
+            </div>
+        </div>
+
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">正在處理...</p>
+        </div>
+
+        <div class="preview-section" id="previewSection" style="display: none;">
+            <h3>原始圖片</h3>
+            <div class="preview-container">
+                <img id="previewImage" alt="預覽圖片">
+                <canvas id="pdfCanvas" style="display: none;"></canvas>
+            </div>
+        </div>
+
+        <div class="result-section" id="resultSection" style="display: none;">
+            <div class="result-header">
+                <h3>辨識結果</h3>
+                <div class="button-group">
+                    <button class="btn btn-secondary" id="selectAllBtn">全選</button>
+                    <button class="btn btn-primary" id="copyBtn">複製選取</button>
+                    <button class="btn btn-success" id="downloadBtn">下載文字</button>
+                </div>
+            </div>
+            <div class="result-container">
+                <div class="result-text" id="resultText" contenteditable="true" spellcheck="false"></div>
+            </div>
+            <div class="edit-info">
+                <small>提示：點擊文字可直接編輯，拖曳可選取文字</small>
+            </div>
+        </div>
+
+        <button class="btn btn-reset" id="resetBtn" style="display: none;">
+            重新上傳
+        </button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="js/api-status.js"></script>
+    <script src="js/advanced-ocr.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>源正山鋼索五金行 - 終極 OCR 辨識系統</title>
+    <link rel="stylesheet" href="css/style-v2.css">
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        .api-status {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .api-status h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .status-item {
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-indicator.active {
+            background: #4CAF50;
+        }
+        .status-indicator.limited {
+            background: #ff9800;
+        }
+        .status-indicator.error {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>源正山鋼索五金行</h1>
+            <h2>🚀 終極 OCR 辨識系統</h2>
+            <p class="subtitle">整合所有可用的免費 OCR 服務，提供最準確的辨識結果</p>
+        </header>
+
+        <!-- API 狀態顯示 -->
+        <div class="api-status">
+            <h3>📊 OCR 引擎狀態</h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-indicator active"></span>
+                    <span>Tesseract.js (本地)</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-indicator active"></span>
+                    <span>Tesseract 增強版</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-indicator active"></span>
+                    <span>OCR.space API</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-indicator active"></span>
+                    <span>AI 智能融合</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 上傳區域 -->
+        <div class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p class="upload-text">拖放檔案到此處或點擊選擇</p>
+                <p class="upload-hint">支援 JPG、PNG、PDF 格式</p>
+                <input type="file" id="fileInput" accept="image/*,.pdf,.heic" hidden>
+            </div>
+        </div>
+
+        <!-- 整體進度 -->
+        <div class="overall-progress" id="overallProgress" style="display: none;">
+            <h3>正在處理...</h3>
+            <div class="progress-container">
+                <div class="engine-progress">
+                    <span class="engine-name">Tesseract 標準版</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress1"></div>
+                    </div>
+                    <span class="status" id="status1">等待中...</span>
+                </div>
+                <div class="engine-progress">
+                    <span class="engine-name">Tesseract 增強版</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress2"></div>
+                    </div>
+                    <span class="status" id="status2">等待中...</span>
+                </div>
+                <div class="engine-progress">
+                    <span class="engine-name">OCR.space API</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress3"></div>
+                    </div>
+                    <span class="status" id="status3">等待中...</span>
+                </div>
+                <div class="engine-progress">
+                    <span class="engine-name">AI 智能融合</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress4"></div>
+                    </div>
+                    <span class="status" id="status4">等待中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 原始圖片預覽 -->
+        <div class="preview-section" id="previewSection" style="display: none;">
+            <h3>原始圖片</h3>
+            <div class="preview-container">
+                <img id="previewImage" alt="預覽圖片">
+                <canvas id="pdfCanvas" style="display: none;"></canvas>
+            </div>
+        </div>
+
+        <!-- 多引擎結果顯示 -->
+        <div class="results-container" id="resultsContainer" style="display: none;">
+            <h3>辨識結果比較</h3>
+            
+            <!-- 快速操作按鈕 -->
+            <div class="quick-actions">
+                <button class="btn btn-primary" onclick="showBestResult()">顯示最佳結果</button>
+                <button class="btn btn-secondary" onclick="compareResults()">比較差異</button>
+                <button class="btn btn-info" onclick="mergeResults()">合併結果</button>
+            </div>
+
+            <!-- 標籤式結果顯示 -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('tab1')">Tesseract 標準</button>
+                <button class="tab-btn" onclick="showTab('tab2')">Tesseract 增強</button>
+                <button class="tab-btn" onclick="showTab('tab3')">OCR.space API</button>
+                <button class="tab-btn" onclick="showTab('tab4')">AI 智能融合</button>
+            </div>
+
+            <!-- 各引擎結果 -->
+            <div class="tab-content" id="tab1">
+                <div class="result-header">
+                    <h4>Tesseract 標準版</h4>
+                    <div class="result-stats">
+                        <span class="confidence" id="confidence1">信心度: --</span>
+                        <span class="time" id="time1">處理時間: --</span>
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-small" onclick="selectText('result1')">全選</button>
+                    <button class="btn-small" onclick="copyText('result1')">複製</button>
+                    <button class="btn-small" onclick="downloadText('result1', 'tesseract-standard')">下載</button>
+                </div>
+                <div class="result-text" id="result1" contenteditable="true" spellcheck="false">
+                    等待辨識...
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab2" style="display: none;">
+                <div class="result-header">
+                    <h4>Tesseract 增強版</h4>
+                    <div class="result-stats">
+                        <span class="confidence" id="confidence2">信心度: --</span>
+                        <span class="time" id="time2">處理時間: --</span>
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-small" onclick="selectText('result2')">全選</button>
+                    <button class="btn-small" onclick="copyText('result2')">複製</button>
+                    <button class="btn-small" onclick="downloadText('result2', 'tesseract-enhanced')">下載</button>
+                </div>
+                <div class="result-text" id="result2" contenteditable="true" spellcheck="false">
+                    等待辨識...
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab3" style="display: none;">
+                <div class="result-header">
+                    <h4>OCR.space API</h4>
+                    <div class="result-stats">
+                        <span class="confidence" id="confidence3">信心度: --</span>
+                        <span class="time" id="time3">處理時間: --</span>
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-small" onclick="selectText('result3')">全選</button>
+                    <button class="btn-small" onclick="copyText('result3')">複製</button>
+                    <button class="btn-small" onclick="downloadText('result3', 'ocr-space')">下載</button>
+                </div>
+                <div class="result-text" id="result3" contenteditable="true" spellcheck="false">
+                    等待辨識...
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab4" style="display: none;">
+                <div class="result-header">
+                    <h4>AI 智能融合結果</h4>
+                    <div class="result-stats">
+                        <span class="confidence" id="confidence4">信心度: --</span>
+                        <span class="time" id="time4">處理時間: --</span>
+                    </div>
+                </div>
+                <div class="ai-info">
+                    <p>🤖 AI 分析了所有引擎的結果，智能選擇最準確的文字</p>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-small" onclick="selectText('result4')">全選</button>
+                    <button class="btn-small" onclick="copyText('result4')">複製</button>
+                    <button class="btn-small" onclick="downloadText('result4', 'ai-fusion')">下載</button>
+                </div>
+                <div class="result-text" id="result4" contenteditable="true" spellcheck="false">
+                    等待辨識...
+                </div>
+            </div>
+        </div>
+
+        <!-- 重新上傳按鈕 -->
+        <button class="btn btn-reset" id="resetBtn" style="display: none;" onclick="resetAll()">
+            重新上傳
+        </button>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 使用已經穩定可用的 multi-ocr.js -->
+    <script>
+        // 直接使用已經測試過可用的配置
+        const OCR_SPACE_API_KEY = 'K87802744288957';
+        
+        // 重用 multi-ocr.js 的程式碼，但只保留可用的引擎
+    </script>
+    <script src="js/multi-ocr.js"></script>
+</body>
+</html>

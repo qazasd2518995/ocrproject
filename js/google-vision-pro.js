@@ -1,9 +1,9 @@
 // 專業 OCR 系統 - 只使用 OCR.space 和 Google Vision API
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// API 設定 - 請替換為您自己的 API Keys
-const OCR_SPACE_API_KEY = 'YOUR_OCR_SPACE_API_KEY';
-const GOOGLE_VISION_API_KEY = 'YOUR_GOOGLE_VISION_API_KEY';
+// API 設定 - 內建 API Keys
+const OCR_SPACE_API_KEY = 'K87802744288957';
+const GOOGLE_VISION_API_KEY = 'AIzaSyA4GoTq74PCU0g-QEEjsxsFIADdM0RJZQ8';
 
 // 全域變數
 let currentFile = null;
@@ -31,7 +31,7 @@ const toast = document.getElementById('toast');
 document.addEventListener('DOMContentLoaded', () => {
     // 檢查登入狀態
     if (!checkAuth()) {
-        window.location.href = 'login.html';
+        window.location.href = '/';
         return;
     }
     
@@ -95,7 +95,7 @@ function setupEventListeners() {
         logoutBtn.addEventListener('click', () => {
             if (confirm('確定要登出系統嗎？')) {
                 sessionStorage.clear();
-                window.location.href = 'login.html';
+                window.location.href = '/';
             }
         });
     }

@@ -3,141 +3,510 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>源正山鋼索五金行 - 帳單辨識系統</title>
-    <link rel="stylesheet" href="css/style.css">
-    <!-- 多個OCR引擎選項 -->
-    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- 圖片預處理庫 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jimp/0.16.1/jimp.min.js"></script>
+    <title>源正山鋼索五金行 - 系統登入</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 動態背景 */
+        .bg-animation {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        .bg-animation span {
+            position: absolute;
+            display: block;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            animation: move 25s linear infinite;
+            bottom: -150px;
+        }
+
+        .bg-animation span:nth-child(1) {
+            left: 25%;
+            width: 80px;
+            height: 80px;
+            animation-delay: 0s;
+        }
+
+        .bg-animation span:nth-child(2) {
+            left: 10%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 2s;
+            animation-duration: 12s;
+        }
+
+        .bg-animation span:nth-child(3) {
+            left: 70%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 4s;
+        }
+
+        .bg-animation span:nth-child(4) {
+            left: 40%;
+            width: 60px;
+            height: 60px;
+            animation-delay: 0s;
+            animation-duration: 18s;
+        }
+
+        .bg-animation span:nth-child(5) {
+            left: 65%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 0s;
+        }
+
+        .bg-animation span:nth-child(6) {
+            left: 75%;
+            width: 110px;
+            height: 110px;
+            animation-delay: 3s;
+        }
+
+        .bg-animation span:nth-child(7) {
+            left: 35%;
+            width: 150px;
+            height: 150px;
+            animation-delay: 7s;
+        }
+
+        .bg-animation span:nth-child(8) {
+            left: 50%;
+            width: 25px;
+            height: 25px;
+            animation-delay: 15s;
+            animation-duration: 45s;
+        }
+
+        .bg-animation span:nth-child(9) {
+            left: 20%;
+            width: 15px;
+            height: 15px;
+            animation-delay: 2s;
+            animation-duration: 35s;
+        }
+
+        .bg-animation span:nth-child(10) {
+            left: 85%;
+            width: 150px;
+            height: 150px;
+            animation-delay: 0s;
+            animation-duration: 11s;
+        }
+
+        @keyframes move {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+                border-radius: 0;
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+                opacity: 0;
+                border-radius: 50%;
+            }
+        }
+
+        /* 登入容器 */
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .logo-icon svg {
+            width: 50px;
+            height: 50px;
+            color: white;
+        }
+
+        .company-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+
+        .system-title {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input.error {
+            border-color: #ef4444;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .toggle-password:hover {
+            color: #374151;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+
+        .login-btn.loading .btn-text {
+            display: none;
+        }
+
+        .login-btn.loading .spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 1rem;
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>源正山鋼索五金行</h1>
-            <h2>智能帳單辨識系統 - 進階版</h2>
-        </header>
-
-        <!-- OCR引擎選擇 -->
-        <div class="engine-selection">
-            <h3>選擇OCR引擎</h3>
-            <div class="engine-options">
-                <label class="engine-option">
-                    <input type="radio" name="ocrEngine" value="tesseract" checked>
-                    <span>Tesseract (本地處理)</span>
-                    <small>Google開源引擎，支援繁體中文</small>
-                </label>
-                <label class="engine-option">
-                    <input type="radio" name="ocrEngine" value="tesseract-enhanced">
-                    <span>Tesseract 增強版</span>
-                    <small>加入圖片預處理，提升辨識率</small>
-                </label>
-                <label class="engine-option">
-                    <input type="radio" name="ocrEngine" value="ocr-space">
-                    <span>OCR.space API (雲端處理)</span>
-                    <small>最高辨識率，每月 25000 次免費</small>
-                </label>
-            </div>
-            <!-- API Key 輸入框 -->
-            <div class="api-key-section" id="apiKeySection" style="display: none;">
-                <label for="apiKeyInput">OCR.space API Key:</label>
-                <input type="text" id="apiKeyInput" value="K87802744288957" placeholder="輸入您的 API Key">
-                <small style="color: green; display: block; margin-top: 5px;">✅ API Key 已設定</small>
-                
-                <!-- API 使用狀態 -->
-                <div class="api-status" id="apiStatus">
-                    <h4>API 使用狀態</h4>
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <span class="status-label">今日使用：</span>
-                            <span class="status-value" id="todayUsage">載入中...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">本月使用：</span>
-                            <span class="status-value" id="monthUsage">載入中...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">剩餘額度：</span>
-                            <span class="status-value" id="remainingCalls">載入中...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">狀態：</span>
-                            <span class="status-value" id="apiStatusText">檢查中...</span>
-                        </div>
-                    </div>
-                    <div class="usage-bar">
-                        <div class="usage-fill" id="usageFill"></div>
-                    </div>
-                    <button class="btn-check-status" onclick="checkAPIStatus()">重新檢查狀態</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 圖片預處理選項 -->
-        <div class="preprocess-options" id="preprocessOptions" style="display: none;">
-            <h4>圖片增強選項</h4>
-            <div class="option-group">
-                <label><input type="checkbox" id="enhanceContrast" checked> 增強對比度</label>
-                <label><input type="checkbox" id="removeNoise" checked> 去除雜訊</label>
-                <label><input type="checkbox" id="binarize" checked> 二值化處理</label>
-                <label><input type="checkbox" id="deskew"> 自動校正傾斜</label>
-            </div>
-        </div>
-
-        <div class="upload-section">
-            <div class="upload-area" id="uploadArea">
-                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <p class="upload-text">拖放檔案到此處或點擊選擇</p>
-                <p class="upload-hint">支援 JPG、PNG、PDF 格式</p>
-                <input type="file" id="fileInput" accept="image/*,.pdf,.heic" hidden>
-            </div>
-        </div>
-
-        <div class="progress-section" id="progressSection" style="display: none;">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <p class="progress-text" id="progressText">正在處理...</p>
-        </div>
-
-        <div class="preview-section" id="previewSection" style="display: none;">
-            <h3>原始圖片</h3>
-            <div class="preview-container">
-                <img id="previewImage" alt="預覽圖片">
-                <canvas id="pdfCanvas" style="display: none;"></canvas>
-            </div>
-        </div>
-
-        <div class="result-section" id="resultSection" style="display: none;">
-            <div class="result-header">
-                <h3>辨識結果</h3>
-                <div class="button-group">
-                    <button class="btn btn-secondary" id="selectAllBtn">全選</button>
-                    <button class="btn btn-primary" id="copyBtn">複製選取</button>
-                    <button class="btn btn-success" id="downloadBtn">下載文字</button>
-                </div>
-            </div>
-            <div class="result-container">
-                <div class="result-text" id="resultText" contenteditable="true" spellcheck="false"></div>
-            </div>
-            <div class="edit-info">
-                <small>提示：點擊文字可直接編輯，拖曳可選取文字</small>
-            </div>
-        </div>
-
-        <button class="btn btn-reset" id="resetBtn" style="display: none;">
-            重新上傳
-        </button>
+    <!-- 動態背景 -->
+    <div class="bg-animation">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <!-- 登入表單 -->
+    <div class="login-container">
+        <div class="logo-section">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <h1 class="company-name">源正山鋼索五金行</h1>
+            <p class="system-title">專業 OCR 辨識系統</p>
+        </div>
 
-    <script src="js/api-status.js"></script>
-    <script src="js/advanced-ocr.js"></script>
-    <script src="js/script.js"></script>
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="username">帳號</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    class="form-input" 
+                    placeholder="請輸入帳號"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">密碼</label>
+                <div class="password-wrapper">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="form-input" 
+                        placeholder="請輸入密碼"
+                        autocomplete="current-password"
+                        required
+                    >
+                    <button type="button" class="toggle-password" id="togglePassword">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage">
+                帳號或密碼錯誤，請重新輸入
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span class="btn-text">登入系統</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+
+        <div class="footer-text">
+            © 2024 源正山鋼索五金行 版權所有
+        </div>
+    </div>
+
+    <script>
+        // 固定的帳號密碼
+        const VALID_USERNAME = '2518995';
+        const VALID_PASSWORD = '2518995';
+
+        // DOM 元素
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const togglePassword = document.getElementById('togglePassword');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // 檢查是否已登入
+        if (sessionStorage.getItem('isLoggedIn') === 'true') {
+            window.location.href = 'main.html';
+        }
+
+        // 切換密碼顯示
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            
+            // 更換圖標
+            if (type === 'text') {
+                togglePassword.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                `;
+            } else {
+                togglePassword.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                `;
+            }
+        });
+
+        // 處理登入
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 清除錯誤狀態
+            usernameInput.classList.remove('error');
+            passwordInput.classList.remove('error');
+            errorMessage.classList.remove('show');
+            
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            // 顯示載入狀態
+            loginBtn.classList.add('loading');
+            
+            // 模擬驗證延遲
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // 驗證帳號密碼
+            if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+                // 登入成功
+                sessionStorage.setItem('isLoggedIn', 'true');
+                sessionStorage.setItem('loginTime', new Date().toISOString());
+                sessionStorage.setItem('username', username);
+                
+                // 跳轉到主頁面
+                window.location.href = 'main.html';
+            } else {
+                // 登入失敗
+                loginBtn.classList.remove('loading');
+                usernameInput.classList.add('error');
+                passwordInput.classList.add('error');
+                errorMessage.classList.add('show');
+                
+                // 清空密碼欄位
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        });
+
+        // 按 Enter 鍵提交表單
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                passwordInput.focus();
+            }
+        });
+
+        // 輸入時清除錯誤狀態
+        [usernameInput, passwordInput].forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error');
+                errorMessage.classList.remove('show');
+            });
+        });
+    </script>
 </body>
 </html>

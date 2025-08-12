@@ -1,0 +1,20 @@
+{
+  "name": "yuan-zheng-shan-ocr",
+  "version": "1.0.0",
+  "description": "Professional OCR System for Yuan Zheng Shan Hardware Store",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve",
+    "build": "echo 'No build required for static site'"
+  },
+  "keywords": [
+    "ocr",
+    "google-vision",
+    "ocr-space",
+    "document-scanner"
+  ],
+  "author": "Yuan Zheng Shan Hardware Store",
+  "license": "Private",
+  "dependencies": {},
+  "devDependencies": {}
+}

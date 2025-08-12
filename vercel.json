@@ -1,6 +1,10 @@
 {
   "version": 2,
   "name": "yuan-zheng-shan-ocr",
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "installCommand": "",
+  "framework": null,
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [

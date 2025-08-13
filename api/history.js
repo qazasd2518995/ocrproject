@@ -219,8 +219,11 @@ async function saveHistory(key, data) {
     const { put } = await import('@vercel/blob');
     await put(key, JSON.stringify(data), {
       access: 'public',
-      contentType: 'application/json'
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      allowOverwrite: true  // 允許覆寫現有檔案
     });
+    console.log('✅ Successfully saved to Blob Storage');
     return;
   }
   

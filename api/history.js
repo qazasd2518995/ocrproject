@@ -16,18 +16,29 @@ export default async function handler(req, res) {
 
   const { action } = req.query;
   const { username } = req.body || req.query;
+  
+  // Debug logging
+  console.log('🔍 API Request:', {
+    method: req.method,
+    action: action,
+    username: username,
+    bodyKeys: Object.keys(req.body || {}),
+    hasRecord: !!(req.body && req.body.record)
+  });
 
   if (!username) {
     return res.status(400).json({ error: 'Username required' });
   }
 
   const storageKey = `history:${username}`;
+  console.log('🔑 Storage key:', storageKey);
 
   try {
     switch (action) {
       case 'list':
         // 獲取歷史記錄
         const history = await getHistory(storageKey);
+        console.log(`📚 Returning ${history.length} records for user ${username}`);
         return res.status(200).json({ success: true, data: history });
 
       case 'add':
@@ -37,12 +48,20 @@ export default async function handler(req, res) {
         }
         
         const currentHistory = await getHistory(storageKey);
+        console.log(`📝 Current history has ${currentHistory.length} records`);
+        
         const newRecord = {
           ...req.body.record,
-          id: Date.now().toString(),
-          date: new Date().toISOString(),
+          id: req.body.record.id || Date.now().toString(),
+          date: req.body.record.date || new Date().toISOString(),
           syncedAt: new Date().toISOString()
         };
+        
+        console.log(`➕ Adding new record:`, {
+          id: newRecord.id,
+          fileName: newRecord.fileName,
+          user: username
+        });
         
         currentHistory.unshift(newRecord);
         
@@ -52,6 +71,8 @@ export default async function handler(req, res) {
         }
         
         await saveHistory(storageKey, currentHistory);
+        console.log(`✅ Saved! Now has ${currentHistory.length} records`);
+        
         return res.status(200).json({ 
           success: true, 
           message: 'History added',
@@ -136,26 +157,33 @@ export default async function handler(req, res) {
 async function getHistory(key) {
   // 如果有 Vercel Blob Storage
   if (process.env.BLOB_READ_WRITE_TOKEN) {
+    console.log('🗄️ Using Vercel Blob Storage');
     try {
       const { get } = await import('@vercel/blob');
       const result = await get(key);
       if (result) {
         const text = await result.text();
-        return JSON.parse(text);
+        const data = JSON.parse(text);
+        console.log(`🗄️ Found ${data.length} records in Blob Storage for ${key}`);
+        return data;
       }
     } catch (error) {
-      console.log('Blob not found, returning empty array');
+      console.log('🗄️ Blob not found, returning empty array');
     }
     return [];
   }
   
   // 否則使用記憶體快取（僅供開發）
-  return memoryCache.get(key) || [];
+  console.log('💾 Using memory cache (dev mode)');
+  const data = memoryCache.get(key) || [];
+  console.log(`💾 Found ${data.length} records in memory for ${key}`);
+  return data;
 }
 
 async function saveHistory(key, data) {
   // 如果有 Vercel Blob Storage
   if (process.env.BLOB_READ_WRITE_TOKEN) {
+    console.log(`🗄️ Saving ${data.length} records to Blob Storage for ${key}`);
     const { put } = await import('@vercel/blob');
     await put(key, JSON.stringify(data), {
       access: 'public',
@@ -165,5 +193,12 @@ async function saveHistory(key, data) {
   }
   
   // 否則使用記憶體快取（僅供開發）
+  console.log(`💾 Saving ${data.length} records to memory cache for ${key}`);
   memoryCache.set(key, data);
+  
+  // 顯示目前所有用戶的記錄數量（調試用）
+  console.log('📊 Current memory cache status:');
+  for (const [k, v] of memoryCache.entries()) {
+    console.log(`  - ${k}: ${v.length} records`);
+  }
 }

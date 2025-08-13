@@ -706,23 +706,46 @@ async function loadHistory() {
                                window.location.hostname.includes('ocrproject') ||
                                (!window.location.protocol.includes('file'));
     
+    console.log('🔍 Debug - Load History:', {
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        isVercelDeployment: isVercelDeployment,
+        useCloudStorage: useCloudStorage,
+        currentUser: getCurrentUser()
+    });
+    
     if (isVercelDeployment && useCloudStorage) {
         try {
             // 從雲端載入
             const apiUrl = window.location.protocol.includes('file') 
                 ? 'https://ocrproject.vercel.app/api/history?action=list'
                 : '/api/history?action=list';
-                
+            
+            console.log('📡 Fetching from cloud API:', apiUrl);
+            
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: getCurrentUser() })
             });
             
+            console.log('📡 Cloud API Response:', {
+                status: response.status,
+                ok: response.ok,
+                statusText: response.statusText
+            });
+            
             if (response.ok) {
                 const result = await response.json();
                 scanHistory = result.data || [];
-                console.log('Loaded from cloud:', scanHistory.length, 'records');
+                console.log('☁️ Loaded from cloud:', {
+                    recordCount: scanHistory.length,
+                    records: scanHistory.map(r => ({
+                        id: r.id,
+                        date: r.date,
+                        fileName: r.fileName
+                    }))
+                });
                 
                 // 同步本地記錄到雲端
                 const localStored = localStorage.getItem(HISTORY_KEY);
@@ -730,6 +753,7 @@ async function loadHistory() {
                     try {
                         const localHistory = JSON.parse(localStored);
                         if (localHistory.length > 0) {
+                            console.log('🔄 Syncing local records to cloud:', localHistory.length);
                             await syncLocalToCloud(localHistory);
                             localStorage.removeItem(HISTORY_KEY); // 清除本地記錄
                         }
@@ -738,19 +762,22 @@ async function loadHistory() {
                     }
                 }
                 return;
+            } else {
+                console.error('❌ Cloud API returned error:', await response.text());
             }
         } catch (error) {
-            console.error('Failed to load from cloud:', error);
+            console.error('❌ Failed to load from cloud:', error);
             useCloudStorage = false;
         }
     }
     
     // 降級到本地儲存
-    console.log('Using local storage');
+    console.log('💾 Using local storage (fallback)');
     const stored = localStorage.getItem(HISTORY_KEY);
     if (stored) {
         try {
             scanHistory = JSON.parse(stored);
+            console.log('💾 Loaded from local storage:', scanHistory.length, 'records');
         } catch (e) {
             scanHistory = [];
         }
@@ -835,37 +862,60 @@ async function addToHistory(fileData, results) {
     const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
                                window.location.hostname.includes('ocrproject') ||
                                (!window.location.protocol.includes('file'));
+    
+    console.log('💾 Saving to history:', {
+        isVercelDeployment: isVercelDeployment,
+        useCloudStorage: useCloudStorage,
+        recordId: record.id,
+        fileName: record.fileName,
+        currentUser: getCurrentUser()
+    });
                                
     if (isVercelDeployment && useCloudStorage) {
         try {
             const apiUrl = window.location.protocol.includes('file') 
                 ? 'https://ocrproject.vercel.app/api/history?action=add'
                 : '/api/history?action=add';
-                
+            
+            console.log('📤 Saving to cloud API:', apiUrl);
+            
+            const requestBody = {
+                username: getCurrentUser(),
+                record: record
+            };
+            console.log('📤 Request body:', requestBody);
+            
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: getCurrentUser(),
-                    record: record
-                })
+                body: JSON.stringify(requestBody)
+            });
+            
+            console.log('📤 Save response:', {
+                status: response.status,
+                ok: response.ok
             });
             
             if (response.ok) {
+                const result = await response.json();
+                console.log('✅ Cloud save successful:', result);
                 showToast('已儲存到雲端歷史記錄', 'success');
                 // 重新載入歷史記錄以確保同步
                 setTimeout(() => loadHistory(), 1000);
             } else {
+                const errorText = await response.text();
+                console.error('❌ Cloud save failed:', errorText);
                 throw new Error('Cloud save failed');
             }
         } catch (error) {
-            console.error('Failed to save to cloud:', error);
+            console.error('❌ Failed to save to cloud:', error);
             // 降級到本地儲存
             saveHistory();
             showToast('已儲存到本地歷史記錄', 'info');
         }
     } else {
         // 只儲存到本地
+        console.log('💾 Saving to local storage only');
         saveHistory();
         showToast('已儲存到本地歷史記錄', 'success');
     }

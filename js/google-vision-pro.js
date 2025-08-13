@@ -83,6 +83,25 @@ function setupEventListeners() {
         });
     });
     
+    // 拍照按鈕
+    const cameraBtn = document.getElementById('cameraBtn');
+    const cameraInput = document.getElementById('cameraInput');
+    if (cameraBtn && cameraInput) {
+        cameraBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cameraInput.click();
+        });
+        
+        cameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+                // 自動開始處理，不需要額外點擊
+                showToast('正在處理拍攝的照片...', 'info');
+            }
+        });
+    }
+    
     // 歷史記錄按鈕
     const historyBtn = document.getElementById('historyBtn');
     if (historyBtn) {
@@ -673,9 +692,50 @@ function checkAuth() {
 // ========== 歷史記錄功能 ==========
 const HISTORY_KEY = 'ocr_history';
 let scanHistory = [];
+let useCloudStorage = true; // 使用雲端儲存
 
-// 載入歷史記錄
-function loadHistory() {
+// 獲取當前使用者名稱
+function getCurrentUser() {
+    return sessionStorage.getItem('username') || '2518995';
+}
+
+// 載入歷史記錄（優先從雲端，失敗則從本地）
+async function loadHistory() {
+    try {
+        if (useCloudStorage) {
+            // 從雲端載入
+            const response = await fetch('/api/history?action=list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: getCurrentUser() })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                scanHistory = result.data || [];
+                
+                // 同步本地記錄到雲端
+                const localStored = localStorage.getItem(HISTORY_KEY);
+                if (localStored) {
+                    try {
+                        const localHistory = JSON.parse(localStored);
+                        if (localHistory.length > 0) {
+                            await syncLocalToCloud(localHistory);
+                            localStorage.removeItem(HISTORY_KEY); // 清除本地記錄
+                        }
+                    } catch (e) {
+                        console.error('Failed to sync local history:', e);
+                    }
+                }
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load from cloud:', error);
+        useCloudStorage = false;
+    }
+    
+    // 降級到本地儲存
     const stored = localStorage.getItem(HISTORY_KEY);
     if (stored) {
         try {
@@ -686,22 +746,55 @@ function loadHistory() {
     }
 }
 
-// 儲存歷史記錄
-function saveHistory() {
+// 同步本地記錄到雲端
+async function syncLocalToCloud(localHistory) {
+    try {
+        const response = await fetch('/api/history?action=sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: getCurrentUser(),
+                localHistory: localHistory
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            scanHistory = result.data || [];
+            showToast('歷史記錄已同步到雲端', 'success');
+        }
+    } catch (error) {
+        console.error('Failed to sync to cloud:', error);
+    }
+}
+
+// 儲存歷史記錄（同時儲存到雲端和本地）
+async function saveHistory() {
+    // 儲存到本地（作為備份）
     try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(scanHistory));
     } catch (e) {
-        console.error('無法儲存歷史記錄:', e);
-        // 如果超過容量，刪除最舊的記錄
+        console.error('無法儲存到本地:', e);
         if (scanHistory.length > 0) {
             scanHistory.shift();
-            saveHistory();
+            await saveHistory();
+        }
+    }
+    
+    // 儲存到雲端
+    if (useCloudStorage) {
+        try {
+            // 雲端會在 addToHistory 時自動儲存
+            return true;
+        } catch (error) {
+            console.error('無法儲存到雲端:', error);
+            useCloudStorage = false;
         }
     }
 }
 
 // 添加新的掃描記錄
-function addToHistory(fileData, results) {
+async function addToHistory(fileData, results) {
     const record = {
         id: Date.now().toString(),
         date: new Date().toISOString(),
@@ -715,7 +808,7 @@ function addToHistory(fileData, results) {
         processingTimes: { ...processingTimes }
     };
     
-    // 添加到開頭
+    // 添加到本地陣列
     scanHistory.unshift(record);
     
     // 限制歷史記錄數量（最多100筆）
@@ -723,8 +816,34 @@ function addToHistory(fileData, results) {
         scanHistory = scanHistory.slice(0, 100);
     }
     
-    saveHistory();
-    showToast('已儲存到歷史記錄', 'success');
+    // 儲存到雲端
+    if (useCloudStorage) {
+        try {
+            const response = await fetch('/api/history?action=add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: getCurrentUser(),
+                    record: record
+                })
+            });
+            
+            if (response.ok) {
+                showToast('已儲存到雲端歷史記錄', 'success');
+            } else {
+                throw new Error('Cloud save failed');
+            }
+        } catch (error) {
+            console.error('Failed to save to cloud:', error);
+            // 降級到本地儲存
+            saveHistory();
+            showToast('已儲存到本地歷史記錄', 'info');
+        }
+    } else {
+        // 只儲存到本地
+        saveHistory();
+        showToast('已儲存到本地歷史記錄', 'success');
+    }
 }
 
 // 顯示歷史記錄
@@ -855,9 +974,32 @@ ${record.results.googlevision || '無結果'}`;
 }
 
 // 刪除歷史記錄
-function deleteHistoryItem(id) {
+async function deleteHistoryItem(id) {
     if (confirm('確定要刪除這筆記錄嗎？')) {
+        // 從本地陣列移除
         scanHistory = scanHistory.filter(r => r.id !== id);
+        
+        // 從雲端刪除
+        if (useCloudStorage) {
+            try {
+                const response = await fetch('/api/history?action=delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: getCurrentUser(),
+                        recordId: id
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Cloud delete failed');
+                }
+            } catch (error) {
+                console.error('Failed to delete from cloud:', error);
+            }
+        }
+        
+        // 更新本地儲存
         saveHistory();
         renderHistoryList(scanHistory);
         showToast('已刪除記錄', 'success');
@@ -865,10 +1007,31 @@ function deleteHistoryItem(id) {
 }
 
 // 清除所有歷史記錄
-function clearAllHistory() {
+async function clearAllHistory() {
     if (confirm('確定要清除所有歷史記錄嗎？此操作無法復原！')) {
         scanHistory = [];
-        saveHistory();
+        
+        // 清除雲端記錄
+        if (useCloudStorage) {
+            try {
+                const response = await fetch('/api/history?action=clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: getCurrentUser()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Cloud clear failed');
+                }
+            } catch (error) {
+                console.error('Failed to clear cloud history:', error);
+            }
+        }
+        
+        // 清除本地儲存
+        localStorage.removeItem(HISTORY_KEY);
         renderHistoryList(scanHistory);
         showToast('已清除所有記錄', 'success');
     }

@@ -66,7 +66,16 @@
                         <p class="upload-info">支援 JPG、PNG、HEIC、PDF 格式</p>
                         <p class="file-size-info">最大檔案大小：10MB</p>
                         <input type="file" id="fileInput" accept="image/*,.pdf,.heic" hidden>
+                        <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
                     </div>
+                    <!-- 拍照按鈕 -->
+                    <button class="camera-btn" id="cameraBtn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <span>拍照上傳</span>
+                    </button>
                 </div>
 
                 <!-- 預覽區 -->

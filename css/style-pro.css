@@ -156,6 +156,7 @@ body {
 /* 上傳容器 */
 .upload-container {
     padding: 2rem;
+    position: relative;
 }
 
 .upload-box {
@@ -204,6 +205,40 @@ body {
 .file-size-info {
     font-size: 0.875rem;
     color: var(--gray-400);
+}
+
+/* 拍照按鈕 */
+.camera-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.875rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: var(--shadow-md);
+}
+
+.camera-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.camera-btn:active {
+    transform: translateY(0);
+}
+
+.camera-btn svg {
+    width: 20px;
+    height: 20px;
 }
 
 /* 預覽容器 */

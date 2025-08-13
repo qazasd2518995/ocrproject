@@ -908,8 +908,11 @@ async function addToHistory(fileData, results) {
                 const result = await response.json();
                 console.log('✅ Cloud save successful:', result);
                 showToast('已儲存到雲端歷史記錄', 'success');
-                // 重新載入歷史記錄以確保同步
-                setTimeout(() => loadHistory(), 1000);
+                
+                // 立即重新載入歷史記錄並更新 UI
+                await loadHistory();
+                renderHistoryList(scanHistory);
+                console.log('🔄 History reloaded and UI updated');
             } else {
                 const errorText = await response.text();
                 console.error('❌ Cloud save failed:', errorText);
@@ -1161,8 +1164,9 @@ async function clearAllHistory() {
             } catch (error) {
                 console.error('❌ Failed to clear cloud history:', error);
                 showToast('清除雲端記錄失敗，請重試', 'error');
-                // 如果雲端清除失敗，重新載入歷史記錄
+                // 如果雲端清除失敗，重新載入歷史記錄並更新 UI
                 await loadHistory();
+                renderHistoryList(scanHistory);
                 return;
             }
         }

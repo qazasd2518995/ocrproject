@@ -245,9 +245,29 @@ async function saveHistory(key, data) {
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     console.log(`🗄️ Saving ${data.length} records to Blob Storage for ${key} (fallback)`);
     try {
-      const { put, del } = await import('@vercel/blob');
+      const { put, del, head } = await import('@vercel/blob');
       
-      // 先嘗試刪除舊的 blob（如果存在）
+      // 如果資料為空（清除操作），只刪除 blob
+      if (data.length === 0) {
+        try {
+          await del(key);
+          console.log(`🗑️ Deleted blob for ${key} (cleared history)`);
+        } catch (delError) {
+          console.log(`🗑️ No blob to delete for ${key}`);
+        }
+        
+        // 驗證刪除
+        try {
+          await head(key);
+          console.error(`❌ Blob still exists after deletion!`);
+        } catch (verifyError) {
+          console.log(`✅ Verified: Blob successfully deleted`);
+        }
+        
+        return;
+      }
+      
+      // 有資料時，先刪除舊的再建立新的
       try {
         await del(key);
         console.log(`🔄 Deleted old blob for ${key}`);
@@ -267,7 +287,6 @@ async function saveHistory(key, data) {
       console.log(`  Pathname: ${result.pathname}`);
       
       // 驗證儲存
-      const { head } = await import('@vercel/blob');
       try {
         const verifyBlob = await head(key);
         console.log(`✅ Verified: Blob exists with size ${verifyBlob.size} bytes`);

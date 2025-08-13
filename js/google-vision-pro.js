@@ -858,13 +858,8 @@ async function addToHistory(fileData, results) {
         processingTimes: { ...processingTimes }
     };
     
-    // 添加到本地陣列
-    scanHistory.unshift(record);
-    
-    // 限制歷史記錄數量（最多100筆）
-    if (scanHistory.length > 100) {
-        scanHistory = scanHistory.slice(0, 100);
-    }
+    // 先不要添加到本地陣列，等雲端儲存成功後再添加
+    // 這樣可以避免重複添加的問題
     
     // 儲存到雲端
     const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
@@ -909,10 +904,38 @@ async function addToHistory(fileData, results) {
                 console.log('✅ Cloud save successful:', result);
                 showToast('已儲存到雲端歷史記錄', 'success');
                 
-                // 立即重新載入歷史記錄並更新 UI
-                await loadHistory();
-                renderHistoryList(scanHistory);
-                console.log('🔄 History reloaded and UI updated');
+                // 立即將新記錄加入本地陣列並更新 UI
+                // 不等待雲端重新載入（避免 Blob Storage 延遲問題）
+                if (result.record) {
+                    // 確保記錄不重複
+                    const existingIndex = scanHistory.findIndex(r => r.id === result.record.id);
+                    if (existingIndex === -1) {
+                        // 新增到開頭
+                        scanHistory.unshift(result.record);
+                        console.log('📝 Added record to local array:', result.record.id);
+                    } else {
+                        // 更新現有記錄
+                        scanHistory[existingIndex] = result.record;
+                        console.log('📝 Updated existing record:', result.record.id);
+                    }
+                    
+                    // 立即更新 UI
+                    renderHistoryList(scanHistory);
+                    console.log('🔄 UI updated with new record');
+                    
+                    // 背景同步（延遲載入以確保 Blob Storage 更新）
+                    setTimeout(async () => {
+                        console.log('🔄 Background sync with cloud...');
+                        await loadHistory();
+                        renderHistoryList(scanHistory);
+                    }, 3000);
+                } else {
+                    // 如果沒有返回記錄，延遲重新載入
+                    setTimeout(async () => {
+                        await loadHistory();
+                        renderHistoryList(scanHistory);
+                    }, 2000);
+                }
             } else {
                 const errorText = await response.text();
                 console.error('❌ Cloud save failed:', errorText);
@@ -921,13 +944,33 @@ async function addToHistory(fileData, results) {
         } catch (error) {
             console.error('❌ Failed to save to cloud:', error);
             // 降級到本地儲存
+            
+            // 添加到本地陣列
+            scanHistory.unshift(record);
+            
+            // 限制歷史記錄數量（最多100筆）
+            if (scanHistory.length > 100) {
+                scanHistory = scanHistory.slice(0, 100);
+            }
+            
             saveHistory();
+            renderHistoryList(scanHistory);
             showToast('已儲存到本地歷史記錄', 'info');
         }
     } else {
         // 只儲存到本地
         console.log('💾 Saving to local storage only');
+        
+        // 添加到本地陣列
+        scanHistory.unshift(record);
+        
+        // 限制歷史記錄數量（最多100筆）
+        if (scanHistory.length > 100) {
+            scanHistory = scanHistory.slice(0, 100);
+        }
+        
         saveHistory();
+        renderHistoryList(scanHistory);
         showToast('已儲存到本地歷史記錄', 'success');
     }
 }

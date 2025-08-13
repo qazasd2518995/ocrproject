@@ -4,6 +4,10 @@
 // 記憶體快取（僅開發用 - 生產環境請使用 Vercel KV）
 const memoryCache = new Map();
 
+// 暫時快取最近寫入的資料（解決 Blob Storage 延遲）
+const writeCache = new Map();
+const WRITE_CACHE_TTL = 60000; // 60 秒快取
+
 export default async function handler(req, res) {
   // 設定 CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -37,7 +41,15 @@ export default async function handler(req, res) {
     switch (action) {
       case 'list':
         // 獲取歷史記錄
-        const history = await getHistory(storageKey);
+        let history = await getHistory(storageKey);
+        
+        // 檢查寫入快取（解決 Blob Storage 延遲）
+        const cachedData = getCachedWrite(storageKey);
+        if (cachedData && cachedData.length > history.length) {
+          console.log(`📝 Using write cache: ${cachedData.length} records (vs ${history.length} from storage)`);
+          history = cachedData;
+        }
+        
         console.log(`📚 Returning ${history.length} records for user ${username}`);
         return res.status(200).json({ success: true, data: history });
 
@@ -70,13 +82,18 @@ export default async function handler(req, res) {
           currentHistory.splice(100);
         }
         
+        // 儲存到快取（立即可讀）
+        setCachedWrite(storageKey, currentHistory);
+        
+        // 儲存到持久化儲存
         await saveHistory(storageKey, currentHistory);
         console.log(`✅ Saved! Now has ${currentHistory.length} records`);
         
         return res.status(200).json({ 
           success: true, 
           message: 'History added',
-          record: newRecord 
+          record: newRecord,
+          totalRecords: currentHistory.length
         });
 
       case 'delete':
@@ -98,6 +115,11 @@ export default async function handler(req, res) {
       case 'clear':
         // 清除所有記錄
         console.log(`🗑️ Clearing all records for ${storageKey}`);
+        
+        // 清除快取
+        clearCachedWrite(storageKey);
+        
+        // 清除持久化儲存
         await saveHistory(storageKey, []);
         
         // 驗證清除是否成功
@@ -310,4 +332,33 @@ async function saveHistory(key, data) {
   for (const [k, v] of memoryCache.entries()) {
     console.log(`  - ${k}: ${v.length} records`);
   }
+}
+
+// 寫入快取管理函數
+function setCachedWrite(key, data) {
+  writeCache.set(key, {
+    data: data,
+    timestamp: Date.now()
+  });
+  console.log(`📝 Set write cache for ${key}: ${data.length} records`);
+}
+
+function getCachedWrite(key) {
+  const cached = writeCache.get(key);
+  if (!cached) return null;
+  
+  // 檢查是否過期
+  if (Date.now() - cached.timestamp > WRITE_CACHE_TTL) {
+    writeCache.delete(key);
+    console.log(`🕐 Write cache expired for ${key}`);
+    return null;
+  }
+  
+  console.log(`📖 Using write cache for ${key}: ${cached.data.length} records`);
+  return cached.data;
+}
+
+function clearCachedWrite(key) {
+  writeCache.delete(key);
+  console.log(`🗑️ Cleared write cache for ${key}`);
 }

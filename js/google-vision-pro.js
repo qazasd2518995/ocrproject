@@ -701,6 +701,14 @@ function getCurrentUser() {
 
 // 載入歷史記錄（優先從雲端，失敗則從本地）
 async function loadHistory() {
+    // 檢查是否剛清除過歷史記錄
+    if (sessionStorage.getItem('historyJustCleared') === 'true') {
+        console.log('📋 History was just cleared, skipping cloud load');
+        sessionStorage.removeItem('historyJustCleared');
+        scanHistory = [];
+        return;
+    }
+    
     // 檢查是否在 Vercel 環境（透過檢查 URL）
     const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
                                window.location.hostname.includes('ocrproject') ||
@@ -1116,7 +1124,9 @@ async function deleteHistoryItem(id) {
 // 清除所有歷史記錄
 async function clearAllHistory() {
     if (confirm('確定要清除所有歷史記錄嗎？此操作無法復原！')) {
+        // 先清除本地記錄
         scanHistory = [];
+        localStorage.removeItem(HISTORY_KEY);
         
         // 清除雲端記錄
         const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
@@ -1128,6 +1138,8 @@ async function clearAllHistory() {
                 const apiUrl = window.location.protocol.includes('file') 
                     ? 'https://ocrproject.vercel.app/api/history?action=clear'
                     : '/api/history?action=clear';
+                
+                console.log('🗑️ Clearing cloud history for user:', getCurrentUser());
                     
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1137,18 +1149,30 @@ async function clearAllHistory() {
                     })
                 });
                 
+                const result = await response.json();
+                console.log('🗑️ Clear cloud response:', result);
+                
                 if (!response.ok) {
-                    throw new Error('Cloud clear failed');
+                    throw new Error(`Cloud clear failed: ${result.error || 'Unknown error'}`);
                 }
+                
+                // 確保雲端清除成功
+                console.log('✅ Cloud history cleared successfully');
             } catch (error) {
-                console.error('Failed to clear cloud history:', error);
+                console.error('❌ Failed to clear cloud history:', error);
+                showToast('清除雲端記錄失敗，請重試', 'error');
+                // 如果雲端清除失敗，重新載入歷史記錄
+                await loadHistory();
+                return;
             }
         }
         
-        // 清除本地儲存
-        localStorage.removeItem(HISTORY_KEY);
+        // 更新 UI
         renderHistoryList(scanHistory);
         showToast('已清除所有記錄', 'success');
+        
+        // 設置標記，避免立即重新載入
+        sessionStorage.setItem('historyJustCleared', 'true');
     }
 }
 

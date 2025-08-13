@@ -1,7 +1,7 @@
 // 統一的歷史記錄 API
-// 使用 Vercel Blob Storage 或記憶體快取
+// 使用 Vercel KV (Redis) 或記憶體快取
 
-// 記憶體快取（開發用）
+// 記憶體快取（僅開發用 - 生產環境請使用 Vercel KV）
 const memoryCache = new Map();
 
 export default async function handler(req, res) {
@@ -155,9 +155,27 @@ export default async function handler(req, res) {
 
 // 儲存函數
 async function getHistory(key) {
-  // 如果有 Vercel Blob Storage
+  // 優先使用 Vercel KV
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    console.log('🗄️ Using Vercel KV Storage');
+    try {
+      const { kv } = await import('@vercel/kv');
+      const data = await kv.get(key);
+      if (data) {
+        console.log(`🗄️ Found ${data.length} records in KV Storage for ${key}`);
+        return data;
+      }
+      console.log('🗄️ No data found in KV, returning empty array');
+      return [];
+    } catch (error) {
+      console.error('🗄️ KV error:', error.message);
+      // 如果 KV 失敗，嘗試 Blob Storage
+    }
+  }
+  
+  // 備用方案：Vercel Blob Storage
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    console.log('🗄️ Using Vercel Blob Storage');
+    console.log('🗄️ Using Vercel Blob Storage (fallback)');
     try {
       const { get } = await import('@vercel/blob');
       const result = await get(key);
@@ -173,17 +191,31 @@ async function getHistory(key) {
     return [];
   }
   
-  // 否則使用記憶體快取（僅供開發）
-  console.log('💾 Using memory cache (dev mode)');
+  // 最後選擇：記憶體快取（僅供本地開發）
+  console.log('💾 Using memory cache (dev mode - data will not persist!)');
   const data = memoryCache.get(key) || [];
   console.log(`💾 Found ${data.length} records in memory for ${key}`);
   return data;
 }
 
 async function saveHistory(key, data) {
-  // 如果有 Vercel Blob Storage
+  // 優先使用 Vercel KV
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    console.log(`🗄️ Saving ${data.length} records to KV Storage for ${key}`);
+    try {
+      const { kv } = await import('@vercel/kv');
+      await kv.set(key, data);
+      console.log('✅ Successfully saved to KV Storage');
+      return;
+    } catch (error) {
+      console.error('❌ KV save error:', error.message);
+      // 如果 KV 失敗，嘗試 Blob Storage
+    }
+  }
+  
+  // 備用方案：Vercel Blob Storage
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    console.log(`🗄️ Saving ${data.length} records to Blob Storage for ${key}`);
+    console.log(`🗄️ Saving ${data.length} records to Blob Storage for ${key} (fallback)`);
     const { put } = await import('@vercel/blob');
     await put(key, JSON.stringify(data), {
       access: 'public',
@@ -192,8 +224,8 @@ async function saveHistory(key, data) {
     return;
   }
   
-  // 否則使用記憶體快取（僅供開發）
-  console.log(`💾 Saving ${data.length} records to memory cache for ${key}`);
+  // 最後選擇：記憶體快取（僅供本地開發）
+  console.log(`💾 Saving ${data.length} records to memory cache for ${key} (dev mode - data will not persist!)`);
   memoryCache.set(key, data);
   
   // 顯示目前所有用戶的記錄數量（調試用）

@@ -177,18 +177,29 @@ async function getHistory(key) {
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     console.log('🗄️ Using Vercel Blob Storage (fallback)');
     try {
-      const { get } = await import('@vercel/blob');
-      const result = await get(key);
-      if (result) {
-        const text = await result.text();
-        const data = JSON.parse(text);
-        console.log(`🗄️ Found ${data.length} records in Blob Storage for ${key}`);
+      const { list } = await import('@vercel/blob');
+      // 列出所有 blobs 找到對應的 key
+      const { blobs } = await list();
+      console.log(`🗄️ Found ${blobs.length} total blobs in storage`);
+      
+      // 尋找對應的 blob
+      const targetBlob = blobs.find(blob => blob.pathname === key);
+      
+      if (targetBlob) {
+        console.log(`🗄️ Found blob for ${key}: ${targetBlob.url}`);
+        // 使用 fetch 直接從 URL 獲取內容
+        const response = await fetch(targetBlob.url);
+        const data = await response.json();
+        console.log(`🗄️ Loaded ${data.length} records from Blob Storage for ${key}`);
         return data;
+      } else {
+        console.log(`🗄️ No blob found for key: ${key}`);
+        return [];
       }
     } catch (error) {
-      console.log('🗄️ Blob not found, returning empty array');
+      console.error('🗄️ Blob read error:', error.message);
+      return [];
     }
-    return [];
   }
   
   // 最後選擇：記憶體快取（僅供本地開發）
@@ -216,15 +227,20 @@ async function saveHistory(key, data) {
   // 備用方案：Vercel Blob Storage
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     console.log(`🗄️ Saving ${data.length} records to Blob Storage for ${key} (fallback)`);
-    const { put } = await import('@vercel/blob');
-    await put(key, JSON.stringify(data), {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-      allowOverwrite: true  // 允許覆寫現有檔案
-    });
-    console.log('✅ Successfully saved to Blob Storage');
-    return;
+    try {
+      const { put } = await import('@vercel/blob');
+      const result = await put(key, JSON.stringify(data), {
+        access: 'public',
+        contentType: 'application/json',
+        addRandomSuffix: false,
+        allowOverwrite: true  // 允許覆寫現有檔案
+      });
+      console.log(`✅ Successfully saved to Blob Storage at ${result.url}`);
+      return;
+    } catch (error) {
+      console.error('❌ Blob save error:', error.message);
+      throw error;
+    }
   }
   
   // 最後選擇：記憶體快取（僅供本地開發）

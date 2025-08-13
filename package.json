@@ -15,6 +15,8 @@
   ],
   "author": "Yuan Zheng Shan Hardware Store",
   "license": "Private",
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@vercel/blob": "^1.1.1",
+    "@vercel/kv": "^3.0.0"
+  }
 }

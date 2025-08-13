@@ -97,10 +97,26 @@ export default async function handler(req, res) {
 
       case 'clear':
         // 清除所有記錄
+        console.log(`🗑️ Clearing all records for ${storageKey}`);
         await saveHistory(storageKey, []);
+        
+        // 驗證清除是否成功
+        const verifyEmpty = await getHistory(storageKey);
+        console.log(`🗑️ After clear, found ${verifyEmpty.length} records`);
+        
+        if (verifyEmpty.length > 0) {
+          console.error(`❌ Clear failed! Still have ${verifyEmpty.length} records`);
+          return res.status(500).json({ 
+            success: false, 
+            error: 'Failed to clear history - records still exist',
+            remainingCount: verifyEmpty.length
+          });
+        }
+        
         return res.status(200).json({ 
           success: true, 
-          message: 'History cleared' 
+          message: 'History cleared',
+          verifiedEmpty: true
         });
 
       case 'sync':
@@ -182,14 +198,24 @@ async function getHistory(key) {
       const { blobs } = await list();
       console.log(`🗄️ Found ${blobs.length} total blobs in storage`);
       
+      // 詳細列出所有 blobs
+      blobs.forEach(blob => {
+        console.log(`  - Blob: ${blob.pathname} (size: ${blob.size} bytes)`);
+      });
+      
       // 尋找對應的 blob
       const targetBlob = blobs.find(blob => blob.pathname === key);
       
       if (targetBlob) {
         console.log(`🗄️ Found blob for ${key}: ${targetBlob.url}`);
+        console.log(`  Size: ${targetBlob.size} bytes, Last modified: ${targetBlob.uploadedAt}`);
+        
         // 使用 fetch 直接從 URL 獲取內容
         const response = await fetch(targetBlob.url);
-        const data = await response.json();
+        const text = await response.text();
+        console.log(`  Raw content (first 100 chars): ${text.substring(0, 100)}`);
+        
+        const data = JSON.parse(text);
         console.log(`🗄️ Loaded ${data.length} records from Blob Storage for ${key}`);
         return data;
       } else {
@@ -198,6 +224,7 @@ async function getHistory(key) {
       }
     } catch (error) {
       console.error('🗄️ Blob read error:', error.message);
+      console.error('Full error:', error);
       return [];
     }
   }

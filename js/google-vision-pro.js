@@ -701,10 +701,19 @@ function getCurrentUser() {
 
 // 載入歷史記錄（優先從雲端，失敗則從本地）
 async function loadHistory() {
-    try {
-        if (useCloudStorage) {
+    // 檢查是否在 Vercel 環境（透過檢查 URL）
+    const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
+                               window.location.hostname.includes('ocrproject') ||
+                               (!window.location.protocol.includes('file'));
+    
+    if (isVercelDeployment && useCloudStorage) {
+        try {
             // 從雲端載入
-            const response = await fetch('/api/history?action=list', {
+            const apiUrl = window.location.protocol.includes('file') 
+                ? 'https://ocrproject.vercel.app/api/history?action=list'
+                : '/api/history?action=list';
+                
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: getCurrentUser() })
@@ -713,6 +722,7 @@ async function loadHistory() {
             if (response.ok) {
                 const result = await response.json();
                 scanHistory = result.data || [];
+                console.log('Loaded from cloud:', scanHistory.length, 'records');
                 
                 // 同步本地記錄到雲端
                 const localStored = localStorage.getItem(HISTORY_KEY);
@@ -729,13 +739,14 @@ async function loadHistory() {
                 }
                 return;
             }
+        } catch (error) {
+            console.error('Failed to load from cloud:', error);
+            useCloudStorage = false;
         }
-    } catch (error) {
-        console.error('Failed to load from cloud:', error);
-        useCloudStorage = false;
     }
     
     // 降級到本地儲存
+    console.log('Using local storage');
     const stored = localStorage.getItem(HISTORY_KEY);
     if (stored) {
         try {
@@ -749,7 +760,11 @@ async function loadHistory() {
 // 同步本地記錄到雲端
 async function syncLocalToCloud(localHistory) {
     try {
-        const response = await fetch('/api/history?action=sync', {
+        const apiUrl = window.location.protocol.includes('file') 
+            ? 'https://ocrproject.vercel.app/api/history?action=sync'
+            : '/api/history?action=sync';
+            
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -817,9 +832,17 @@ async function addToHistory(fileData, results) {
     }
     
     // 儲存到雲端
-    if (useCloudStorage) {
+    const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
+                               window.location.hostname.includes('ocrproject') ||
+                               (!window.location.protocol.includes('file'));
+                               
+    if (isVercelDeployment && useCloudStorage) {
         try {
-            const response = await fetch('/api/history?action=add', {
+            const apiUrl = window.location.protocol.includes('file') 
+                ? 'https://ocrproject.vercel.app/api/history?action=add'
+                : '/api/history?action=add';
+                
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -830,6 +853,8 @@ async function addToHistory(fileData, results) {
             
             if (response.ok) {
                 showToast('已儲存到雲端歷史記錄', 'success');
+                // 重新載入歷史記錄以確保同步
+                setTimeout(() => loadHistory(), 1000);
             } else {
                 throw new Error('Cloud save failed');
             }
@@ -851,6 +876,21 @@ function showHistory() {
     const modal = document.getElementById('historyModal');
     const historyList = document.getElementById('historyList');
     
+    // 顯示同步狀態
+    const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
+                               window.location.hostname.includes('ocrproject') ||
+                               (!window.location.protocol.includes('file'));
+    
+    const syncStatus = isVercelDeployment && useCloudStorage 
+        ? '<span style="color: #10b981;">☁️ 雲端同步中</span>' 
+        : '<span style="color: #f59e0b;">💾 本地儲存</span>';
+    
+    // 更新 modal header 顯示同步狀態
+    const modalHeader = modal.querySelector('.modal-header h2');
+    if (modalHeader) {
+        modalHeader.innerHTML = `歷史記錄 ${syncStatus}`;
+    }
+    
     if (scanHistory.length === 0) {
         historyList.innerHTML = `
             <div class="empty-history">
@@ -862,6 +902,15 @@ function showHistory() {
         `;
     } else {
         renderHistoryList(scanHistory);
+    }
+    
+    // 如果是雲端模式，重新載入最新資料
+    if (isVercelDeployment && useCloudStorage) {
+        loadHistory().then(() => {
+            if (scanHistory.length > 0) {
+                renderHistoryList(scanHistory);
+            }
+        });
     }
     
     modal.classList.add('show');
@@ -980,9 +1029,17 @@ async function deleteHistoryItem(id) {
         scanHistory = scanHistory.filter(r => r.id !== id);
         
         // 從雲端刪除
-        if (useCloudStorage) {
+        const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
+                                   window.location.hostname.includes('ocrproject') ||
+                                   (!window.location.protocol.includes('file'));
+                                   
+        if (isVercelDeployment && useCloudStorage) {
             try {
-                const response = await fetch('/api/history?action=delete', {
+                const apiUrl = window.location.protocol.includes('file') 
+                    ? 'https://ocrproject.vercel.app/api/history?action=delete'
+                    : '/api/history?action=delete';
+                    
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1012,9 +1069,17 @@ async function clearAllHistory() {
         scanHistory = [];
         
         // 清除雲端記錄
-        if (useCloudStorage) {
+        const isVercelDeployment = window.location.hostname.includes('vercel.app') || 
+                                   window.location.hostname.includes('ocrproject') ||
+                                   (!window.location.protocol.includes('file'));
+                                   
+        if (isVercelDeployment && useCloudStorage) {
             try {
-                const response = await fetch('/api/history?action=clear', {
+                const apiUrl = window.location.protocol.includes('file') 
+                    ? 'https://ocrproject.vercel.app/api/history?action=clear'
+                    : '/api/history?action=clear';
+                    
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

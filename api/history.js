@@ -193,38 +193,28 @@ async function getHistory(key) {
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     console.log('🗄️ Using Vercel Blob Storage (fallback)');
     try {
-      const { list } = await import('@vercel/blob');
-      // 列出所有 blobs 找到對應的 key
-      const { blobs } = await list();
-      console.log(`🗄️ Found ${blobs.length} total blobs in storage`);
+      // 使用 head 方法直接檢查 blob
+      const { head } = await import('@vercel/blob');
       
-      // 詳細列出所有 blobs
-      blobs.forEach(blob => {
-        console.log(`  - Blob: ${blob.pathname} (size: ${blob.size} bytes)`);
-      });
-      
-      // 尋找對應的 blob
-      const targetBlob = blobs.find(blob => blob.pathname === key);
-      
-      if (targetBlob) {
-        console.log(`🗄️ Found blob for ${key}: ${targetBlob.url}`);
-        console.log(`  Size: ${targetBlob.size} bytes, Last modified: ${targetBlob.uploadedAt}`);
+      try {
+        // 嘗試獲取 blob 的 metadata
+        const blobDetails = await head(key);
+        console.log(`🗄️ Found blob ${key} with URL: ${blobDetails.url}`);
+        console.log(`  Size: ${blobDetails.size} bytes`);
         
-        // 使用 fetch 直接從 URL 獲取內容
-        const response = await fetch(targetBlob.url);
+        // 使用 URL 直接讀取內容
+        const response = await fetch(blobDetails.url);
         const text = await response.text();
-        console.log(`  Raw content (first 100 chars): ${text.substring(0, 100)}`);
-        
         const data = JSON.parse(text);
-        console.log(`🗄️ Loaded ${data.length} records from Blob Storage for ${key}`);
+        console.log(`🗄️ Successfully loaded ${data.length} records from Blob Storage`);
         return data;
-      } else {
+      } catch (headError) {
+        // 如果 blob 不存在，返回空陣列
         console.log(`🗄️ No blob found for key: ${key}`);
         return [];
       }
     } catch (error) {
-      console.error('🗄️ Blob read error:', error.message);
-      console.error('Full error:', error);
+      console.error('🗄️ Blob Storage error:', error.message);
       return [];
     }
   }
@@ -255,14 +245,36 @@ async function saveHistory(key, data) {
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     console.log(`🗄️ Saving ${data.length} records to Blob Storage for ${key} (fallback)`);
     try {
-      const { put } = await import('@vercel/blob');
+      const { put, del } = await import('@vercel/blob');
+      
+      // 先嘗試刪除舊的 blob（如果存在）
+      try {
+        await del(key);
+        console.log(`🔄 Deleted old blob for ${key}`);
+      } catch (delError) {
+        // 忽略刪除錯誤（blob 可能不存在）
+      }
+      
+      // 建立新的 blob
       const result = await put(key, JSON.stringify(data), {
         access: 'public',
         contentType: 'application/json',
-        addRandomSuffix: false,
-        allowOverwrite: true  // 允許覆寫現有檔案
+        addRandomSuffix: false
       });
-      console.log(`✅ Successfully saved to Blob Storage at ${result.url}`);
+      
+      console.log(`✅ Successfully saved to Blob Storage`);
+      console.log(`  URL: ${result.url}`);
+      console.log(`  Pathname: ${result.pathname}`);
+      
+      // 驗證儲存
+      const { head } = await import('@vercel/blob');
+      try {
+        const verifyBlob = await head(key);
+        console.log(`✅ Verified: Blob exists with size ${verifyBlob.size} bytes`);
+      } catch (verifyError) {
+        console.error(`❌ Verification failed: Cannot find blob after save!`);
+      }
+      
       return;
     } catch (error) {
       console.error('❌ Blob save error:', error.message);

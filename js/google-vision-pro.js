@@ -37,7 +37,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setupEventListeners();
     loadHistory();
+    initializeLLM();
 });
+
+// 初始化 LLM 系統
+function initializeLLM() {
+    // 確保 Groq LLM 已初始化並設定為預設
+    if (window.freeLLMFormatter) {
+        window.freeLLMFormatter.provider = 'groq';
+        window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+        window.freeLLMFormatter.isEnabled = true;
+        
+        // 檢查是否有設定 API Key
+        const groqKey = localStorage.getItem('groq_api_key');
+        if (!groqKey) {
+            console.warn('⚠️ 未設定 Groq API Key，請在瀏覽器控制台執行：localStorage.setItem("groq_api_key", "your_key")');
+        } else {
+            console.log('✅ 系統已設定為自動使用 Groq LLM 處理');
+        }
+    }
+}
 
 // 設定事件監聽器
 function setupEventListeners() {
@@ -378,11 +397,6 @@ async function runOCREngines(imageData) {
     
     await Promise.allSettled(promises);
     
-    // 儲存到歷史記錄
-    if (currentFile && (ocrResults.ocrspace || ocrResults.googlevision)) {
-        addToHistory(currentFile, ocrResults);
-    }
-    
     // 顯示結果
     resultsContainer.style.display = 'block';
     updateCompareView();
@@ -434,9 +448,45 @@ async function runOCRSpace(imageData) {
         processingTimes.ocrspace = endTime - startTime;
         
         if (result.ParsedResults && result.ParsedResults[0]) {
-            ocrResults.ocrspace = result.ParsedResults[0].ParsedText;
-            document.getElementById('ocrspaceText').textContent = ocrResults.ocrspace;
-            document.getElementById('compareOcrspace').textContent = ocrResults.ocrspace;
+            const originalText = result.ParsedResults[0].ParsedText;
+            ocrResults.ocrspace = originalText;
+            
+            // 顯示正在 LLM 處理的狀態
+            updateEngineStatus('ocrSpace', '🤖 AI 智能處理中...', true);
+            document.getElementById('ocrspaceText').textContent = '🚀 正在使用 AI 整理發票格式，請稍候...\n\n⚡ 使用 Groq Llama 3 70B 模型\n📋 自動識別商品項目\n💰 計算金額總計';
+            document.getElementById('compareOcrspace').textContent = '🚀 正在使用 AI 整理發票格式，請稍候...';
+            
+            // 自動使用免費 LLM 處理（預設 Groq）
+            let formattedText = originalText;
+            
+            if (originalText) {
+                try {
+                    console.log('🚀 自動使用 Groq LLM 處理發票 (OCR.space)');
+                    
+                    if (window.freeLLMFormatter) {
+                        window.freeLLMFormatter.provider = 'groq';
+                        window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+                        window.freeLLMFormatter.isEnabled = true;
+                        
+                        formattedText = await window.freeLLMFormatter.formatInvoiceText(originalText);
+                        updateEngineStatus('ocrSpace', '✅ AI 處理完成', false, true);
+                        console.log('✅ Groq LLM 處理成功');
+                    } else {
+                        throw new Error('LLM 格式化器未載入');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ LLM 處理失敗:', error);
+                    updateEngineStatus('ocrSpace', 'LLM 處理失敗，使用原始結果', false, false);
+                    formattedText = `⚠️ LLM 處理失敗：${error.message}\n\n📋 原始 OCR 結果：\n${originalText}`;
+                }
+            }
+            
+            document.getElementById('ocrspaceText').textContent = formattedText;
+            document.getElementById('compareOcrspace').textContent = formattedText;
+            
+            // 更新 ocrResults 以儲存格式化後的結果
+            ocrResults.ocrspace = formattedText;
             
             updateProgress('ocrSpace', 100, true);
             updateEngineStatus('ocrSpace', '完成', false, true);
@@ -445,6 +495,9 @@ async function runOCRSpace(imageData) {
             document.getElementById('ocrSpaceTime').textContent = `${processingTimes.ocrspace}ms`;
             document.getElementById('ocrSpaceConfidence').textContent = '高';
             document.getElementById('ocrSpaceStats').style.display = 'flex';
+            
+            // 如果兩個引擎都完成了，儲存到歷史記錄
+            checkAndSaveHistory();
         } else {
             throw new Error(result.ErrorMessage || 'API 返回錯誤');
         }
@@ -453,6 +506,9 @@ async function runOCRSpace(imageData) {
         updateProgress('ocrSpace', 100, false, true);
         updateEngineStatus('ocrSpace', '錯誤: ' + error.message, false, false, true);
         document.getElementById('ocrspaceText').textContent = '辨識失敗: ' + error.message;
+        
+        // 錯誤時也檢查是否可以儲存歷史記錄
+        checkAndSaveHistory();
     }
 }
 
@@ -525,8 +581,45 @@ async function runGoogleVision(imageData) {
             }
             
             ocrResults.googlevision = text;
-            document.getElementById('googlevisionText').textContent = text || '未檢測到文字';
-            document.getElementById('compareGooglevision').textContent = text || '未檢測到文字';
+            
+            // 顯示正在 LLM 處理的狀態
+            if (text) {
+                updateEngineStatus('googleVision', '🤖 AI 智能處理中...', true);
+                document.getElementById('googlevisionText').textContent = '🚀 正在使用 AI 整理發票格式，請稍候...\n\n⚡ 使用 Groq Llama 3 70B 模型\n📋 自動識別商品項目\n💰 計算金額總計';
+                document.getElementById('compareGooglevision').textContent = '🚀 正在使用 AI 整理發票格式，請稍候...';
+            }
+            
+            // 自動使用免費 LLM 處理（預設 Groq）
+            let formattedText = text || '未檢測到文字';
+            
+            if (text) {
+                try {
+                    console.log('🚀 自動使用 Groq LLM 處理發票 (Google Vision)');
+                    
+                    if (window.freeLLMFormatter) {
+                        window.freeLLMFormatter.provider = 'groq';
+                        window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+                        window.freeLLMFormatter.isEnabled = true;
+                        
+                        formattedText = await window.freeLLMFormatter.formatInvoiceText(text);
+                        updateEngineStatus('googleVision', '✅ AI 處理完成', false, true);
+                        console.log('✅ Groq LLM 處理成功 (Google Vision)');
+                    } else {
+                        throw new Error('LLM 格式化器未載入');
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ LLM 處理失敗 (Google Vision):', error);
+                    updateEngineStatus('googleVision', 'LLM 處理失敗，使用原始結果', false, false);
+                    formattedText = `⚠️ LLM 處理失敗：${error.message}\n\n📋 原始 OCR 結果：\n${text}`;
+                }
+            }
+            
+            document.getElementById('googlevisionText').textContent = formattedText;
+            document.getElementById('compareGooglevision').textContent = formattedText;
+            
+            // 更新 ocrResults 以儲存格式化後的結果
+            ocrResults.googlevision = formattedText;
             
             updateProgress('googleVision', 100, true);
             updateEngineStatus('googleVision', '完成', false, true);
@@ -537,6 +630,9 @@ async function runGoogleVision(imageData) {
             document.getElementById('googleVisionTime').textContent = `${processingTimes.googlevision}ms`;
             document.getElementById('googleVisionConfidence').textContent = `${confidence}%`;
             document.getElementById('googleVisionStats').style.display = 'flex';
+            
+            // 如果兩個引擎都完成了，儲存到歷史記錄
+            checkAndSaveHistory();
         } else if (result.error) {
             let errorMsg = result.error.message;
             if (result.error.code === 7) {
@@ -553,6 +649,9 @@ async function runGoogleVision(imageData) {
         updateProgress('googleVision', 100, false, true);
         updateEngineStatus('googleVision', '錯誤: ' + error.message, false, false, true);
         document.getElementById('googlevisionText').textContent = '辨識失敗: ' + error.message;
+        
+        // 錯誤時也檢查是否可以儲存歷史記錄
+        checkAndSaveHistory();
     }
 }
 
@@ -687,6 +786,34 @@ function showToast(message, type = 'info') {
 // ========== 認證功能 ==========
 function checkAuth() {
     return sessionStorage.getItem('isLoggedIn') === 'true';
+}
+
+// 檢查是否可以儲存歷史記錄（兩個引擎都完成）
+function checkAndSaveHistory() {
+    // 檢查是否有檔案且至少有一個 OCR 結果
+    if (!currentFile) {
+        console.log('📋 沒有檔案，跳過儲存歷史記錄');
+        return;
+    }
+    
+    // 檢查是否至少有一個引擎完成並有結果
+    const hasOcrspaceResult = ocrResults.ocrspace && ocrResults.ocrspace.trim() !== '';
+    const hasGoogleVisionResult = ocrResults.googlevision && ocrResults.googlevision.trim() !== '';
+    
+    if (!hasOcrspaceResult && !hasGoogleVisionResult) {
+        console.log('📋 沒有 OCR 結果，跳過儲存歷史記錄');
+        return;
+    }
+    
+    console.log('💾 準備儲存格式化後的結果到歷史記錄:', {
+        hasOcrspace: hasOcrspaceResult,
+        hasGoogleVision: hasGoogleVisionResult,
+        ocrspaceLength: ocrResults.ocrspace ? ocrResults.ocrspace.length : 0,
+        googlevisionLength: ocrResults.googlevision ? ocrResults.googlevision.length : 0
+    });
+    
+    // 儲存到歷史記錄（現在包含 LLM 格式化後的結果）
+    addToHistory(currentFile, ocrResults);
 }
 
 // ========== 歷史記錄功能 ==========

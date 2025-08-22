@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔑 API Key 設定 - 源正山 OCR 系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .step ol {
+            margin-left: 1rem;
+        }
+        
+        .step li {
+            margin: 0.5rem 0;
+            line-height: 1.5;
+        }
+        
+        .api-key-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin: 1rem 0;
+            transition: border-color 0.3s;
+        }
+        
+        .api-key-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin: 1rem 0;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .link-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            text-decoration: none;
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            transition: all 0.3s;
+        }
+        
+        .link-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        .console-code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        
+        .copy-btn {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        
+        .copy-btn:hover {
+            background: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔑 Groq API Key 設定</h1>
+            <p>設定後即可使用 AI 智能發票格式化功能</p>
+        </div>
+
+        <div class="step">
+            <h3>📋 1. 取得免費 Groq API Key</h3>
+            <ol>
+                <li>前往 Groq 官方網站註冊</li>
+                <li>使用 Google 或 GitHub 帳號登入</li>
+                <li>點擊 "API Keys" → "Create API Key"</li>
+                <li>複製生成的 API Key</li>
+            </ol>
+            <a href="https://console.groq.com" target="_blank" class="link-btn">🚀 前往 Groq Console</a>
+        </div>
+
+        <div class="step">
+            <h3>⚙️ 2. 在此設定 API Key</h3>
+            <input type="text" 
+                   id="apiKeyInput" 
+                   class="api-key-input" 
+                   placeholder="貼上您的 Groq API Key..." 
+                   autocomplete="off">
+            <button onclick="setAPIKey()" class="btn" id="setBtn">💾 儲存 API Key</button>
+            <div id="status"></div>
+        </div>
+
+        <div class="step">
+            <h3>🎯 3. 開始使用</h3>
+            <p>設定完成後，您就可以：</p>
+            <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                <li>上傳發票圖片</li>
+                <li>自動 OCR 識別</li>
+                <li>AI 智能格式化</li>
+                <li>查看整理好的發票明細</li>
+            </ul>
+            <a href="/main.html" class="link-btn" id="goToMainBtn" style="display: none;">🏠 前往 OCR 系統</a>
+        </div>
+
+        <div class="step">
+            <h3>💻 手動設定（開發者）</h3>
+            <p>您也可以在瀏覽器控制台手動執行：</p>
+            <div class="console-code" id="consoleCode">
+localStorage.setItem('groq_api_key', 'YOUR_API_KEY_HERE');
+            </div>
+            <button onclick="copyConsoleCode()" class="copy-btn">📋 複製指令</button>
+        </div>
+    </div>
+
+    <script>
+        // 檢查是否已設定 API Key
+        function checkExistingAPIKey() {
+            const existingKey = localStorage.getItem('groq_api_key');
+            if (existingKey && existingKey.trim() !== '') {
+                document.getElementById('status').innerHTML = `
+                    <div class="success">
+                        <strong>✅ 已設定 API Key</strong><br>
+                        <small>API Key: ${existingKey.substring(0, 10)}...${existingKey.slice(-4)}</small>
+                    </div>
+                `;
+                document.getElementById('apiKeyInput').value = existingKey;
+                document.getElementById('goToMainBtn').style.display = 'inline-block';
+            }
+        }
+
+        // 設定 API Key
+        function setAPIKey() {
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const statusDiv = document.getElementById('status');
+            const setBtn = document.getElementById('setBtn');
+            
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                statusDiv.innerHTML = '<div class="error">❌ 請輸入 API Key</div>';
+                return;
+            }
+
+            // 基本驗證 API Key 格式
+            if (!apiKey.startsWith('gsk_') || apiKey.length < 20) {
+                statusDiv.innerHTML = '<div class="error">❌ API Key 格式不正確<br><small>Groq API Key 應該以 "gsk_" 開頭</small></div>';
+                return;
+            }
+
+            try {
+                // 儲存到 localStorage
+                localStorage.setItem('groq_api_key', apiKey);
+                
+                statusDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ API Key 設定成功！</strong><br>
+                        <small>已儲存到瀏覽器本地儲存</small>
+                    </div>
+                `;
+                
+                document.getElementById('goToMainBtn').style.display = 'inline-block';
+                
+                // 3秒後自動跳轉
+                setTimeout(() => {
+                    window.location.href = '/main.html';
+                }, 3000);
+                
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="error">❌ 儲存失敗: ' + error.message + '</div>';
+            }
+        }
+
+        // 複製控制台指令
+        function copyConsoleCode() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const code = apiKey ? 
+                `localStorage.setItem('groq_api_key', '${apiKey}');` : 
+                `localStorage.setItem('groq_api_key', 'YOUR_API_KEY_HERE');`;
+                
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ 已複製';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(() => {
+                alert('複製失敗，請手動複製');
+            });
+        }
+
+        // 監聽 Enter 鍵
+        document.getElementById('apiKeyInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                setAPIKey();
+            }
+        });
+
+        // 頁面載入時檢查
+        checkExistingAPIKey();
+    </script>
+</body>
+</html>

@@ -64,17 +64,18 @@ async function initializeLLM() {
                 
                 if (data.config.GROQ_API_KEY) {
                     console.log('✅ 系統已設定為自動使用 Groq LLM 處理');
-                } else {
-                    console.warn('⚠️ Vercel 未設定 GROQ_API_KEY 環境變數');
-                    showAPIKeyHelp();
+                    return; // 成功載入環境變數，直接返回
                 }
             }
-        } else {
-            console.warn('⚠️ 無法獲取 Vercel 配置，檢查 localStorage...');
-            checkLocalAPIKey();
         }
+        
+        // 如果環境變數沒有 API Key，檢查 localStorage
+        console.log('🔍 檢查瀏覽器本地儲存的 API Key...');
+        checkLocalAPIKey();
+        
     } catch (error) {
-        console.warn('⚠️ Vercel API 不可用，檢查 localStorage...', error);
+        // API 端點不可用或其他錯誤，檢查 localStorage
+        console.log('🔍 API 端點不可用，檢查瀏覽器本地儲存...');
         checkLocalAPIKey();
     }
 }
@@ -85,29 +86,101 @@ function checkLocalAPIKey() {
     if (!groqKey || groqKey.trim() === '') {
         console.warn('⚠️ 未設定 Groq API Key');
         showAPIKeyHelp();
+        showUserAPIKeyPrompt();
     } else {
-        console.log('✅ 使用 localStorage 中的 Groq API Key');
+        console.log('✅ 找到 localStorage 中的 Groq API Key');
+        // 重新載入 API Keys 到 freeLLMFormatter
+        if (window.freeLLMFormatter) {
+            window.freeLLMFormatter.apiKeys = window.freeLLMFormatter.loadAPIKeys();
+            console.log('🔄 已更新 LLM 格式化器的 API Key');
+        }
+    }
+}
+
+// 顯示用戶友好的 API Key 設定提示
+function showUserAPIKeyPrompt() {
+    // 在頁面上顯示友好的提示
+    const toast = document.getElementById('toast');
+    if (toast) {
+        toast.innerHTML = `
+            <div style="text-align: left; line-height: 1.4;">
+                <strong>🔑 需要設定 Groq API Key</strong><br>
+                <small>點擊設定或查看控制台詳細說明</small><br>
+                <a href="/setup-api-key.html" style="color: #fff; text-decoration: underline; font-weight: bold;">
+                    ⚙️ 前往設定頁面
+                </a>
+            </div>
+        `;
+        toast.className = 'toast show';
+        toast.style.maxWidth = '400px';
+        toast.style.whiteSpace = 'normal';
+        toast.style.cursor = 'pointer';
+        
+        // 點擊 toast 也可以前往設定頁面
+        toast.addEventListener('click', function() {
+            window.location.href = '/setup-api-key.html';
+        });
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 15000); // 顯示15秒
     }
 }
 
 // 顯示 API Key 設定說明
 function showAPIKeyHelp() {
     console.log(`
-🔑 API Key 設定說明：
+🔑 Groq API Key 設定教學：
 
-方法一：Vercel 環境變數（推薦）
-1. 前往 Vercel Dashboard
-2. 選擇您的專案
-3. 進入 Settings → Environment Variables
-4. 新增變數：GROQ_API_KEY = your_groq_api_key
-5. 重新部署專案
+📋 快速設定（複製貼上以下指令）：
+localStorage.setItem('groq_api_key', 'YOUR_GROQ_API_KEY_HERE');
 
-方法二：瀏覽器本地儲存
-在控制台執行：localStorage.setItem('groq_api_key', 'your_groq_api_key');
+🚀 完整步驟：
 
-取得免費 Groq API Key：https://console.groq.com
+1️⃣ 取得免費 Groq API Key：
+   - 前往：https://console.groq.com
+   - 使用 Google/GitHub 註冊登入
+   - 點擊 "API Keys" → "Create API Key"
+   - 複製生成的 API Key
+
+2️⃣ 在此頁面設定 API Key：
+   - 按 F12 開啟開發者工具
+   - 切換到 "Console" 標籤
+   - 貼上：localStorage.setItem('groq_api_key', '您的API_KEY');
+   - 按 Enter 執行
+   - 重新整理頁面
+
+💡 為什麼需要 API Key？
+   - 系統使用 Groq 的 Llama 3 70B 模型進行智能發票格式化
+   - Groq 提供免費額度，速度極快
+   - 無需信用卡，註冊即可使用
+
+❓ 需要協助？請檢查控制台訊息或查看 GitHub 文檔
     `);
 }
+
+// 全域函數：讓用戶可以直接在控制台呼叫
+window.setGroqAPIKey = function(apiKey) {
+    if (!apiKey || apiKey.trim() === '') {
+        console.error('❌ API Key 不能為空');
+        return false;
+    }
+    
+    localStorage.setItem('groq_api_key', apiKey.trim());
+    console.log('✅ Groq API Key 已設定成功！');
+    console.log('🔄 請重新整理頁面以生效');
+    
+    // 立即更新系統
+    if (window.freeLLMFormatter) {
+        window.freeLLMFormatter.apiKeys = window.freeLLMFormatter.loadAPIKeys();
+        console.log('🔄 LLM 格式化器已更新');
+    }
+    
+    return true;
+};
+
+// 在控制台提供友好的幫助命令
+console.log('💡 快速設定 API Key：setGroqAPIKey("your_api_key_here")');
 
 // 設定事件監聽器
 function setupEventListeners() {

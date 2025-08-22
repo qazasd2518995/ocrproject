@@ -54,10 +54,13 @@ async function initializeLLM() {
 
     try {
         console.log('🔍 嘗試從 /api/config 載入環境變數...');
+        console.log('🌐 當前域名:', window.location.hostname);
+        console.log('🔗 當前 URL:', window.location.href);
         
         // 從 Vercel API 獲取環境變數配置
         const response = await fetch('/api/config');
         console.log('📡 API 回應狀態:', response.status, response.statusText);
+        console.log('📡 API 回應 URL:', response.url);
         
         if (response.ok) {
             const data = await response.json();
@@ -78,6 +81,19 @@ async function initializeLLM() {
             }
         } else {
             console.error('❌ API 端點回應錯誤:', response.status, response.statusText);
+            
+            // 嘗試測試其他已知的 API 端點
+            try {
+                console.log('🔍 測試 /api/test 端點...');
+                const testResponse = await fetch('/api/test');
+                console.log('🧪 測試端點回應:', testResponse.status, testResponse.url);
+                if (testResponse.ok) {
+                    const testData = await testResponse.json();
+                    console.log('🧪 測試端點資料:', testData);
+                }
+            } catch (testError) {
+                console.log('❌ 測試端點失敗:', testError.message);
+            }
         }
         
         // 如果到這裡，表示沒有成功載入 API Key

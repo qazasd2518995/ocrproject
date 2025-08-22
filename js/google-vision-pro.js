@@ -923,9 +923,10 @@ const HISTORY_KEY = 'ocr_history';
 let scanHistory = [];
 let useCloudStorage = true; // 使用雲端儲存
 
-// 獲取當前使用者名稱
+// 獲取當前使用者名稱（所有裝置共用同一個帳號）
 function getCurrentUser() {
-    return sessionStorage.getItem('username') || '2518995';
+    // 使用固定的用戶ID，讓所有裝置共享歷史記錄
+    return 'yuan-zheng-shan-user';
 }
 
 // 載入歷史記錄（優先從雲端，失敗則從本地）

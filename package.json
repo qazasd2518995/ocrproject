@@ -2,6 +2,7 @@
   "name": "yuan-zheng-shan-ocr",
   "version": "1.0.0",
   "description": "Professional OCR System for Yuan Zheng Shan Hardware Store",
+  "type": "module",
   "main": "index.html",
   "scripts": {
     "dev": "npx serve",

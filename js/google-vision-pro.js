@@ -53,25 +53,40 @@ async function initializeLLM() {
     window.freeLLMFormatter.isEnabled = true;
 
     try {
+        console.log('🔍 嘗試從 /api/config 載入環境變數...');
+        
         // 從 Vercel API 獲取環境變數配置
         const response = await fetch('/api/config');
+        console.log('📡 API 回應狀態:', response.status, response.statusText);
+        
         if (response.ok) {
             const data = await response.json();
+            console.log('📋 收到配置資料:', {
+                success: data.success,
+                hasGroqKey: !!data.config?.GROQ_API_KEY,
+                timestamp: data.timestamp
+            });
+            
             if (data.success && data.config && data.config.GROQ_API_KEY) {
                 // 將環境變數設定到全域變數中
                 window.ENV_VARS = data.config;
                 console.log('✅ 系統已從 Vercel 環境變數載入 Groq API Key');
                 console.log('🚀 AI 智能發票格式化功能已啟用');
                 return;
+            } else {
+                console.warn('⚠️ API 回應成功但未包含有效的 GROQ_API_KEY');
             }
+        } else {
+            console.error('❌ API 端點回應錯誤:', response.status, response.statusText);
         }
         
-        // 如果 API 端點不可用或沒有設定環境變數
-        console.error('❌ 未設定 GROQ_API_KEY 環境變數');
+        // 如果到這裡，表示沒有成功載入 API Key
+        console.error('❌ 未能從 Vercel 環境變數載入 GROQ_API_KEY');
         showVercelSetupHelp();
         
     } catch (error) {
-        console.error('❌ 無法連接到配置 API:', error);
+        console.error('❌ 連接到配置 API 時發生錯誤:', error.message);
+        console.log('🔧 可能的原因: API 端點未正確部署或網路問題');
         showVercelSetupHelp();
     }
 }

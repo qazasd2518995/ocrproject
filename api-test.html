@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 端點測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 API 端點測試工具</h1>
+    
+    <div>
+        <button onclick="testEndpoint('/api/test')">測試 /api/test</button>
+        <button onclick="testEndpoint('/api/config')">測試 /api/config</button>
+        <button onclick="testEndpoint('/api/env')">測試 /api/env</button>
+        <button onclick="testEndpoint('/api/history?action=list&username=test')">測試 /api/history</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        function showResult(endpoint, success, data, status, url) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'success' : 'error'}`;
+            
+            div.innerHTML = `
+                <h3>${success ? '✅' : '❌'} ${endpoint}</h3>
+                <p><strong>狀態:</strong> ${status}</p>
+                <p><strong>URL:</strong> ${url}</p>
+                <p><strong>域名:</strong> ${window.location.hostname}</p>
+                <p><strong>完整 URL:</strong> ${window.location.href}</p>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            
+            results.insertBefore(div, results.firstChild);
+        }
+        
+        async function testEndpoint(endpoint) {
+            console.log(`🔍 測試端點: ${endpoint}`);
+            
+            try {
+                const response = await fetch(endpoint);
+                const data = await response.json();
+                
+                showResult(
+                    endpoint, 
+                    response.ok, 
+                    data, 
+                    `${response.status} ${response.statusText}`,
+                    response.url
+                );
+                
+                console.log(`📡 ${endpoint} 回應:`, {
+                    status: response.status,
+                    url: response.url,
+                    data: data
+                });
+                
+            } catch (error) {
+                showResult(
+                    endpoint, 
+                    false, 
+                    { error: error.message }, 
+                    'Network Error',
+                    'N/A'
+                );
+                
+                console.error(`❌ ${endpoint} 錯誤:`, error);
+            }
+        }
+        
+        // 頁面載入時顯示基本資訊
+        window.addEventListener('load', () => {
+            console.log('🌐 當前域名:', window.location.hostname);
+            console.log('🔗 當前 URL:', window.location.href);
+            console.log('📡 User Agent:', navigator.userAgent);
+        });
+    </script>
+</body>
+</html>

@@ -925,8 +925,9 @@ let useCloudStorage = true; // 使用雲端儲存
 
 // 獲取當前使用者名稱（所有裝置共用同一個帳號）
 function getCurrentUser() {
-    // 使用固定的用戶ID，讓所有裝置共享歷史記錄
-    return 'yuan-zheng-shan-user';
+    // 強制使用統一的用戶ID，忽略 sessionStorage，讓所有裝置共享歷史記錄
+    // 這樣不管從哪個裝置登入，都使用相同的帳號來儲存和讀取歷史記錄
+    return 'yuan-zheng-shan-shared';
 }
 
 // 載入歷史記錄（優先從雲端，失敗則從本地）

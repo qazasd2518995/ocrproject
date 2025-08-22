@@ -12,8 +12,9 @@ class FreeLLMInvoiceFormatter {
     }
 
     initializeSettings() {
-        this.isEnabled = localStorage.getItem('freeLLMFormatterEnabled') !== 'false';
-        this.provider = localStorage.getItem('freeLLMProvider') || 'groq';
+        // 固定設定，不依賴 localStorage
+        this.isEnabled = true;
+        this.provider = 'groq';
     }
 
     loadAPIKeys() {
@@ -28,17 +29,9 @@ class FreeLLMInvoiceFormatter {
         };
     }
 
-    // 從多個來源獲取 API Key：環境變數 > localStorage > 預設值
+    // 從 Vercel 環境變數獲取 API Key
     getAPIKey(provider) {
-        // 1. 首先檢查是否在瀏覽器環境中有 localStorage
-        if (typeof localStorage !== 'undefined') {
-            const localKey = localStorage.getItem(`${provider}_api_key`);
-            if (localKey && localKey.trim() !== '') {
-                return localKey;
-            }
-        }
-
-        // 2. 檢查全域變數（可能從服務端設定）
+        // 檢查全域變數（從 Vercel API 載入的環境變數）
         if (typeof window !== 'undefined' && window.ENV_VARS) {
             const envKey = window.ENV_VARS[`${provider.toUpperCase()}_API_KEY`];
             if (envKey && envKey.trim() !== '') {
@@ -46,21 +39,14 @@ class FreeLLMInvoiceFormatter {
             }
         }
 
-        // 3. 檢查預設的演示 Key（僅限開發）
-        if (provider === 'groq' && window.location.hostname.includes('localhost')) {
-            console.warn('🚧 使用開發環境，請設定正式的 API Key');
-        }
-
+        // 如果沒有找到環境變數
+        console.warn(`⚠️ 未找到 ${provider.toUpperCase()}_API_KEY 環境變數`);
         return '';
     }
 
     loadSelectedModel() {
-        return localStorage.getItem('freeLLMModel') || 'llama3-70b-8192';
-    }
-
-    saveAPIKey(provider, key) {
-        this.apiKeys[provider] = key;
-        localStorage.setItem(`${provider}_api_key`, key);
+        // 固定使用最強的 Groq 模型
+        return 'llama3-70b-8192';
     }
 
     getAvailableModels() {
@@ -412,24 +398,21 @@ ${rawText}
         
         let suggestions = '';
         if (isAPIKeyError) {
-            suggestions = `💡 API Key 設定方法：
+            suggestions = `💡 需要設定 Vercel 環境變數：
 
-方法一：Vercel 環境變數（推薦）
+📋 設定步驟：
 1. 前往 Vercel Dashboard
 2. 選擇您的專案  
 3. 進入 Settings → Environment Variables
-4. 新增變數：${this.provider.toUpperCase()}_API_KEY = your_api_key
+4. 新增變數：GROQ_API_KEY = your_api_key
 5. 重新部署專案
-
-方法二：瀏覽器本地儲存
-localStorage.setItem('${this.provider}_api_key', 'your_api_key');
 
 🔗 取得免費 Groq API Key：https://console.groq.com`;
         } else {
             suggestions = `💡 建議：
 1. 檢查網路連接
 2. 稍後重試  
-3. 嘗試其他免費供應商`;
+3. 檢查 Vercel 環境變數設定`;
         }
 
         return `📋 發票內容（AI 處理失敗，顯示原始 OCR 結果）

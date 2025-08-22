@@ -18,14 +18,40 @@ class FreeLLMInvoiceFormatter {
 
     loadAPIKeys() {
         return {
-            huggingface: localStorage.getItem('huggingface_api_key') || '',
-            cohere: localStorage.getItem('cohere_api_key') || '',
-            ai21: localStorage.getItem('ai21_api_key') || '',
-            groq: localStorage.getItem('groq_api_key') || '',
-            deepinfra: localStorage.getItem('deepinfra_api_key') || '',
-            together: localStorage.getItem('together_api_key') || '',
-            replicate: localStorage.getItem('replicate_api_key') || ''
+            huggingface: this.getAPIKey('huggingface'),
+            cohere: this.getAPIKey('cohere'),
+            ai21: this.getAPIKey('ai21'),
+            groq: this.getAPIKey('groq'),
+            deepinfra: this.getAPIKey('deepinfra'),
+            together: this.getAPIKey('together'),
+            replicate: this.getAPIKey('replicate')
         };
+    }
+
+    // 從多個來源獲取 API Key：環境變數 > localStorage > 預設值
+    getAPIKey(provider) {
+        // 1. 首先檢查是否在瀏覽器環境中有 localStorage
+        if (typeof localStorage !== 'undefined') {
+            const localKey = localStorage.getItem(`${provider}_api_key`);
+            if (localKey && localKey.trim() !== '') {
+                return localKey;
+            }
+        }
+
+        // 2. 檢查全域變數（可能從服務端設定）
+        if (typeof window !== 'undefined' && window.ENV_VARS) {
+            const envKey = window.ENV_VARS[`${provider.toUpperCase()}_API_KEY`];
+            if (envKey && envKey.trim() !== '') {
+                return envKey;
+            }
+        }
+
+        // 3. 檢查預設的演示 Key（僅限開發）
+        if (provider === 'groq' && window.location.hostname.includes('localhost')) {
+            console.warn('🚧 使用開發環境，請設定正式的 API Key');
+        }
+
+        return '';
     }
 
     loadSelectedModel() {
@@ -382,15 +408,39 @@ ${rawText}
 
     // 降級格式化
     fallbackFormat(text, errorMsg) {
-        return `📋 發票內容（LLM 處理失敗）
-────────────────────────────────────
+        const isAPIKeyError = errorMsg.includes('API Key') || errorMsg.includes('Authorization') || errorMsg.includes('401');
+        
+        let suggestions = '';
+        if (isAPIKeyError) {
+            suggestions = `💡 API Key 設定方法：
+
+方法一：Vercel 環境變數（推薦）
+1. 前往 Vercel Dashboard
+2. 選擇您的專案  
+3. 進入 Settings → Environment Variables
+4. 新增變數：${this.provider.toUpperCase()}_API_KEY = your_api_key
+5. 重新部署專案
+
+方法二：瀏覽器本地儲存
+localStorage.setItem('${this.provider}_api_key', 'your_api_key');
+
+🔗 取得免費 Groq API Key：https://console.groq.com`;
+        } else {
+            suggestions = `💡 建議：
+1. 檢查網路連接
+2. 稍後重試  
+3. 嘗試其他免費供應商`;
+        }
+
+        return `📋 發票內容（AI 處理失敗，顯示原始 OCR 結果）
+════════════════════════════════════════════
+
 ${text}
-────────────────────────────────────
+
+────────────────────────────────────────────
 ⚠️ 錯誤：${errorMsg}
-💡 建議：
-1. 檢查 API Key 設定：localStorage.setItem('${this.provider}_api_key', 'your_key')
-2. 檢查網路連接
-3. 嘗試其他免費供應商：Groq、Hugging Face`;
+
+${suggestions}`;
     }
 
     // 測試連接

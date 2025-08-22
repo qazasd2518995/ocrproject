@@ -41,21 +41,72 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 初始化 LLM 系統
-function initializeLLM() {
-    // 確保 Groq LLM 已初始化並設定為預設
-    if (window.freeLLMFormatter) {
-        window.freeLLMFormatter.provider = 'groq';
-        window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
-        window.freeLLMFormatter.isEnabled = true;
-        
-        // 檢查是否有設定 API Key
-        const groqKey = localStorage.getItem('groq_api_key');
-        if (!groqKey) {
-            console.warn('⚠️ 未設定 Groq API Key，請在瀏覽器控制台執行：localStorage.setItem("groq_api_key", "your_key")');
-        } else {
-            console.log('✅ 系統已設定為自動使用 Groq LLM 處理');
-        }
+async function initializeLLM() {
+    if (!window.freeLLMFormatter) {
+        console.error('❌ FreeLLMFormatter 未載入');
+        return;
     }
+
+    // 設定預設值
+    window.freeLLMFormatter.provider = 'groq';
+    window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+    window.freeLLMFormatter.isEnabled = true;
+
+    try {
+        // 嘗試從 Vercel API 獲取環境變數配置
+        const response = await fetch('/api/config');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.config) {
+                // 將環境變數設定到全域變數中
+                window.ENV_VARS = data.config;
+                console.log('🔧 已從 Vercel 環境變數載入配置');
+                
+                if (data.config.GROQ_API_KEY) {
+                    console.log('✅ 系統已設定為自動使用 Groq LLM 處理');
+                } else {
+                    console.warn('⚠️ Vercel 未設定 GROQ_API_KEY 環境變數');
+                    showAPIKeyHelp();
+                }
+            }
+        } else {
+            console.warn('⚠️ 無法獲取 Vercel 配置，檢查 localStorage...');
+            checkLocalAPIKey();
+        }
+    } catch (error) {
+        console.warn('⚠️ Vercel API 不可用，檢查 localStorage...', error);
+        checkLocalAPIKey();
+    }
+}
+
+// 檢查本地 API Key
+function checkLocalAPIKey() {
+    const groqKey = localStorage.getItem('groq_api_key');
+    if (!groqKey || groqKey.trim() === '') {
+        console.warn('⚠️ 未設定 Groq API Key');
+        showAPIKeyHelp();
+    } else {
+        console.log('✅ 使用 localStorage 中的 Groq API Key');
+    }
+}
+
+// 顯示 API Key 設定說明
+function showAPIKeyHelp() {
+    console.log(`
+🔑 API Key 設定說明：
+
+方法一：Vercel 環境變數（推薦）
+1. 前往 Vercel Dashboard
+2. 選擇您的專案
+3. 進入 Settings → Environment Variables
+4. 新增變數：GROQ_API_KEY = your_groq_api_key
+5. 重新部署專案
+
+方法二：瀏覽器本地儲存
+在控制台執行：localStorage.setItem('groq_api_key', 'your_groq_api_key');
+
+取得免費 Groq API Key：https://console.groq.com
+    `);
 }
 
 // 設定事件監聽器

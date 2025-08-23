@@ -676,10 +676,24 @@ async function runGoogleVision(imageData) {
             const response = result.responses[0];
             
             let text = '';
-            if (response.fullTextAnnotation) {
+            let structuredData = null;
+            
+            // 嘗試使用結構化的表格資訊
+            if (response.fullTextAnnotation && response.fullTextAnnotation.pages) {
+                structuredData = response.fullTextAnnotation.pages;
                 text = response.fullTextAnnotation.text;
+                console.log('📋 發現表格結構資訊，正在解析...');
             } else if (response.textAnnotations && response.textAnnotations[0]) {
                 text = response.textAnnotations[0].description;
+            }
+            
+            // 如果有表格結構，嘗試解析表格
+            if (structuredData) {
+                const tableData = parseTableStructure(structuredData);
+                if (tableData && tableData.length > 0) {
+                    text = `表格資料：\n${tableData.join('\n')}\n\n原始文字：\n${text}`;
+                    console.log('✅ 已解析表格結構，包含', tableData.length, '行資料');
+                }
             }
             
             ocrResults.googlevision = text;
@@ -928,6 +942,56 @@ function getCurrentUser() {
     // 強制使用統一的用戶ID，忽略 sessionStorage，讓所有裝置共享歷史記錄
     // 這樣不管從哪個裝置登入，都使用相同的帳號來儲存和讀取歷史記錄
     return 'yuan-zheng-shan-shared';
+}
+
+// 解析 Google Vision 表格結構
+function parseTableStructure(pages) {
+    try {
+        const tableRows = [];
+        
+        for (const page of pages) {
+            if (page.blocks) {
+                for (const block of page.blocks) {
+                    if (block.paragraphs) {
+                        for (const paragraph of block.paragraphs) {
+                            if (paragraph.words) {
+                                // 收集這一段的所有文字
+                                const words = paragraph.words.map(word => {
+                                    return word.symbols ? word.symbols.map(s => s.text).join('') : '';
+                                }).filter(w => w.trim());
+                                
+                                if (words.length > 0) {
+                                    const text = words.join(' ').trim();
+                                    
+                                    // 檢查是否像產品行（包含編號+品名的模式）
+                                    if (isProductRow(text)) {
+                                        tableRows.push(`產品行: ${text}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return tableRows;
+    } catch (error) {
+        console.error('表格結構解析錯誤:', error);
+        return [];
+    }
+}
+
+// 判斷是否為產品行
+function isProductRow(text) {
+    // 檢查是否包含可能的產品編號格式
+    const hasProductCode = /[A-Z]+\d+[-]?\d+/i.test(text);
+    // 避免純數字行（價格、數量等）
+    const isPureNumbers = /^\d+[\s\d.,]*$/.test(text.trim());
+    // 避免標題行
+    const isHeader = /^(產品編號|品名|規格|數量|單價|金額|小計)/i.test(text);
+    
+    return hasProductCode && !isPureNumbers && !isHeader && text.length > 5;
 }
 
 // 載入歷史記錄（優先從雲端，失敗則從本地）

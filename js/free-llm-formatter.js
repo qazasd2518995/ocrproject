@@ -164,7 +164,6 @@ ${rawText}
 
 ────────────────────────────────────
 📦 共 [項目數] 項商品
-⚡ 由 ${this.provider.toUpperCase()} ${this.selectedModel} 處理
 
 只輸出整理後的發票，不要額外說明。`;
     }

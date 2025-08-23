@@ -1364,11 +1364,7 @@ function renderHistoryList(records) {
             </div>
             <div class="history-item-results">
                 <div class="history-result">
-                    <div class="history-result-title">OCR.space</div>
-                    <div class="history-result-text">${record.results.ocrspace || '無結果'}</div>
-                </div>
-                <div class="history-result">
-                    <div class="history-result-title">Google Vision</div>
+                    <div class="history-result-title">辨識結果</div>
                     <div class="history-result-text">${record.results.googlevision || '無結果'}</div>
                 </div>
             </div>
@@ -1386,7 +1382,6 @@ function searchHistory(query) {
     const filtered = scanHistory.filter(record => {
         const searchText = query.toLowerCase();
         return record.fileName.toLowerCase().includes(searchText) ||
-               (record.results.ocrspace && record.results.ocrspace.toLowerCase().includes(searchText)) ||
                (record.results.googlevision && record.results.googlevision.toLowerCase().includes(searchText));
     });
     
@@ -1401,11 +1396,11 @@ function viewHistoryDetail(id) {
     // 關閉歷史 modal
     document.getElementById('historyModal').classList.remove('show');
     
-    // 填充結果到主頁面
-    document.getElementById('ocrspaceText').textContent = record.results.ocrspace || '無結果';
-    document.getElementById('googlevisionText').textContent = record.results.googlevision || '無結果';
-    document.getElementById('compareOcrspace').textContent = record.results.ocrspace || '無結果';
-    document.getElementById('compareGooglevision').textContent = record.results.googlevision || '無結果';
+    // 填充結果到主頁面（只保留 Google Vision）
+    const googlevisionText = document.getElementById('googlevisionText');
+    if (googlevisionText) {
+        googlevisionText.textContent = record.results.googlevision || '無結果';
+    }
     
     // 顯示結果區域
     resultsContainer.style.display = 'block';
@@ -1421,10 +1416,7 @@ function copyHistoryText(id) {
     const text = `檔案: ${record.fileName}
 日期: ${formatDate(record.date)}
 
-OCR.space 結果:
-${record.results.ocrspace || '無結果'}
-
-Google Vision 結果:
+辨識結果:
 ${record.results.googlevision || '無結果'}`;
     
     navigator.clipboard.writeText(text).then(() => {

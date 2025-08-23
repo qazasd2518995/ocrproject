@@ -984,14 +984,37 @@ function parseTableStructure(pages) {
 
 // 判斷是否為產品行
 function isProductRow(text) {
-    // 檢查是否包含可能的產品編號格式
-    const hasProductCode = /[A-Z]+\d+[-]?\d+/i.test(text);
+    // 檢查是否包含產品編號格式，但要更嚴格
+    const hasProductCode = /^[A-Z]+\d+[-]\d+[A-Z]*\d*\s+/i.test(text) || // CC104-4001 開頭
+                          /\s[A-Z]+\d+[-]\d+[A-Z]*\d*\s/i.test(text);   // 中間位置
+    
     // 避免純數字行（價格、數量等）
     const isPureNumbers = /^\d+[\s\d.,]*$/.test(text.trim());
-    // 避免標題行
-    const isHeader = /^(產品編號|品名|規格|數量|單價|金額|小計)/i.test(text);
     
-    return hasProductCode && !isPureNumbers && !isHeader && text.length > 5;
+    // 避免標題行和表格頭
+    const isHeader = /^(產品編號|品名|規格|數量|單價|金額|小計|客戶|地址|電話)/i.test(text);
+    
+    // 避免日期和總計行
+    const isDateOrTotal = /^\d{4}[-/]\d{1,2}[-/]\d{1,2}|總計|小計|合計/i.test(text);
+    
+    // 必須包含中文品名（真正的產品會有中文描述）
+    const hasChineseName = /[\u4e00-\u9fff]{2,}/.test(text);
+    
+    // 避免太短的行（不太可能是完整的產品資訊）
+    const hasMinLength = text.length > 10;
+    
+    console.log('🔍 產品行檢查:', {
+        text: text.substring(0, 50) + '...',
+        hasProductCode,
+        hasChineseName,
+        isPureNumbers,
+        isHeader,
+        isDateOrTotal,
+        hasMinLength,
+        isValid: hasProductCode && hasChineseName && !isPureNumbers && !isHeader && !isDateOrTotal && hasMinLength
+    });
+    
+    return hasProductCode && hasChineseName && !isPureNumbers && !isHeader && !isDateOrTotal && hasMinLength;
 }
 
 // 載入歷史記錄（優先從雲端，失敗則從本地）

@@ -25,10 +25,6 @@
                 <div class="api-status-bar">
                     <div class="status-item">
                         <span class="status-dot active"></span>
-                        <span>OCR.space API</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-dot active"></span>
                         <span>Google Vision API</span>
                     </div>
                     <button class="history-btn" id="historyBtn">
@@ -102,29 +98,6 @@
                 <div class="process-container" id="processContainer" style="display: none;">
                     <h3>處理進度</h3>
                     <div class="ocr-engines">
-                        <!-- OCR.space -->
-                        <div class="engine-card">
-                            <div class="engine-header">
-                                <div class="engine-info">
-                                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234CAF50'%3E%3Cpath d='M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z'/%3E%3C/svg%3E" alt="OCR.space" class="engine-logo">
-                                    <div>
-                                        <h4>OCR.space API</h4>
-                                        <span class="engine-desc">雲端高精度辨識</span>
-                                    </div>
-                                </div>
-                                <div class="engine-status" id="ocrSpaceStatus">
-                                    <span class="processing-spinner" style="display: none;"></span>
-                                    <span class="status-text">準備中...</span>
-                                </div>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="ocrSpaceProgress"></div>
-                            </div>
-                            <div class="engine-stats" id="ocrSpaceStats" style="display: none;">
-                                <span class="stat-time">處理時間: <span id="ocrSpaceTime">--</span></span>
-                                <span class="stat-confidence">準確度: <span id="ocrSpaceConfidence">--</span></span>
-                            </div>
-                        </div>
 
                         <!-- Google Vision -->
                         <div class="engine-card">
@@ -156,37 +129,10 @@
                 <div class="results-container" id="resultsContainer" style="display: none;">
                     <div class="results-header">
                         <h3>辨識結果</h3>
-                        <div class="result-tabs">
-                            <button class="tab-btn active" data-engine="ocrspace">OCR.space</button>
-                            <button class="tab-btn" data-engine="googlevision">Google Vision</button>
-                            <button class="tab-btn" data-engine="compare">比較模式</button>
-                        </div>
-                    </div>
-
-                    <!-- OCR.space 結果 -->
-                    <div class="result-panel active" id="ocrspaceResult">
-                        <div class="result-toolbar">
-                            <button class="btn-sm" onclick="copyText('ocrspaceText')">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                                </svg>
-                                複製
-                            </button>
-                            <button class="btn-sm" onclick="downloadText('ocrspaceText', 'OCRspace')">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                                </svg>
-                                下載
-                            </button>
-                        </div>
-                        <div class="result-text" id="ocrspaceText" contenteditable="true" spellcheck="false">
-                            等待辨識...
-                        </div>
                     </div>
 
                     <!-- Google Vision 結果 -->
-                    <div class="result-panel" id="googlevisionResult">
+                    <div class="result-panel active" id="googlevisionResult">
                         <div class="result-toolbar">
                             <button class="btn-sm" onclick="copyText('googlevisionText')">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -207,20 +153,6 @@
                         </div>
                     </div>
 
-                    <!-- 比較模式 -->
-                    <div class="result-panel" id="compareResult">
-                        <div class="compare-container">
-                            <div class="compare-side">
-                                <h4>OCR.space</h4>
-                                <div class="compare-text" id="compareOcrspace"></div>
-                            </div>
-                            <div class="compare-divider"></div>
-                            <div class="compare-side">
-                                <h4>Google Vision</h4>
-                                <div class="compare-text" id="compareGooglevision"></div>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- 動作按鈕 -->
                     <div class="action-buttons">

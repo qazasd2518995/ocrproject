@@ -1,4 +1,4 @@
-// 專業 OCR 系統 - 只使用 OCR.space 和 Google Vision API
+// 專業 OCR 系統 - 使用 Google Vision API (支援表格結構識別)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 // API 設定 - 內建 API Keys
@@ -491,13 +491,8 @@ async function runOCREngines(imageData) {
         googlevision: null
     };
     
-    // 並行執行兩個 API
-    const promises = [
-        runOCRSpace(imageData),
-        runGoogleVision(imageData)
-    ];
-    
-    await Promise.allSettled(promises);
+    // 只使用 Google Vision API (支援表格結構識別)
+    await runGoogleVision(imageData);
     
     // 顯示結果
     resultsContainer.style.display = 'block';

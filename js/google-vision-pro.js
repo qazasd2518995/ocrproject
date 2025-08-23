@@ -696,8 +696,10 @@ async function runGoogleVision(imageData) {
             // 顯示正在 LLM 處理的狀態
             if (text) {
                 updateEngineStatus('googleVision', '🤖 AI 智能處理中...', true);
-                document.getElementById('googlevisionText').textContent = '🚀 正在使用 AI 整理發票格式，請稍候...\n\n⚡ 使用 Groq Llama 3 70B 模型\n📋 自動識別商品項目\n💰 計算金額總計';
-                document.getElementById('compareGooglevision').textContent = '🚀 正在使用 AI 整理發票格式，請稍候...';
+                const googlevisionText = document.getElementById('googlevisionText');
+                if (googlevisionText) {
+                    googlevisionText.textContent = '🚀 正在使用 AI 整理發票格式，請稍候...\n\n⚡ 使用 Groq Llama 3 70B 模型\n📋 自動識別商品項目\n💰 計算金額總計';
+                }
             }
             
             // 自動使用免費 LLM 處理（預設 Groq）
@@ -726,8 +728,10 @@ async function runGoogleVision(imageData) {
                 }
             }
             
-            document.getElementById('googlevisionText').textContent = formattedText;
-            document.getElementById('compareGooglevision').textContent = formattedText;
+            const googlevisionText = document.getElementById('googlevisionText');
+            if (googlevisionText) {
+                googlevisionText.textContent = formattedText;
+            }
             
             // 更新 ocrResults 以儲存格式化後的結果
             ocrResults.googlevision = formattedText;
@@ -814,14 +818,10 @@ function switchTab(engine) {
     document.getElementById(`${engine}Result`).classList.add('active');
 }
 
-// 更新比較視圖
+// 更新比較視圖（已移除，不再需要）
 function updateCompareView() {
-    if (ocrResults.ocrspace) {
-        document.getElementById('compareOcrspace').textContent = ocrResults.ocrspace;
-    }
-    if (ocrResults.googlevision) {
-        document.getElementById('compareGooglevision').textContent = ocrResults.googlevision;
-    }
+    // 比較功能已移除，只保留 Google Vision
+    console.log('比較視圖已移除，使用單一 Google Vision 結果');
 }
 
 // 複製文字
@@ -863,23 +863,23 @@ function resetUpload() {
         googlevision: null
     };
     
-    // 重置進度條
-    updateProgress('ocrSpace', 0);
+    // 重置進度條（只保留 Google Vision）
     updateProgress('googleVision', 0);
     
     // 重置狀態
-    updateEngineStatus('ocrSpace', '準備中...');
     updateEngineStatus('googleVision', '準備中...');
     
     // 隱藏統計資訊
-    document.getElementById('ocrSpaceStats').style.display = 'none';
-    document.getElementById('googleVisionStats').style.display = 'none';
+    const googleVisionStats = document.getElementById('googleVisionStats');
+    if (googleVisionStats) {
+        googleVisionStats.style.display = 'none';
+    }
     
     // 重置文字區域
-    document.getElementById('ocrspaceText').textContent = '等待辨識...';
-    document.getElementById('googlevisionText').textContent = '等待辨識...';
-    document.getElementById('compareOcrspace').textContent = '';
-    document.getElementById('compareGooglevision').textContent = '';
+    const googlevisionText = document.getElementById('googlevisionText');
+    if (googlevisionText) {
+        googlevisionText.textContent = '等待辨識...';
+    }
 }
 
 // 顯示 Toast 通知
@@ -907,19 +907,16 @@ function checkAndSaveHistory() {
         return;
     }
     
-    // 檢查是否至少有一個引擎完成並有結果
-    const hasOcrspaceResult = ocrResults.ocrspace && ocrResults.ocrspace.trim() !== '';
+    // 檢查是否有 Google Vision 結果
     const hasGoogleVisionResult = ocrResults.googlevision && ocrResults.googlevision.trim() !== '';
     
-    if (!hasOcrspaceResult && !hasGoogleVisionResult) {
+    if (!hasGoogleVisionResult) {
         console.log('📋 沒有 OCR 結果，跳過儲存歷史記錄');
         return;
     }
     
     console.log('💾 準備儲存格式化後的結果到歷史記錄:', {
-        hasOcrspace: hasOcrspaceResult,
         hasGoogleVision: hasGoogleVisionResult,
-        ocrspaceLength: ocrResults.ocrspace ? ocrResults.ocrspace.length : 0,
         googlevisionLength: ocrResults.googlevision ? ocrResults.googlevision.length : 0
     });
     
@@ -1165,7 +1162,6 @@ async function addToHistory(fileData, results) {
         fileSize: fileData.size,
         fileType: fileData.type,
         results: {
-            ocrspace: results.ocrspace,
             googlevision: results.googlevision
         },
         processingTimes: { ...processingTimes }

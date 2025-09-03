@@ -46,7 +46,7 @@ class FreeLLMInvoiceFormatter {
 
     loadSelectedModel() {
         // 固定使用最強的 Groq 模型
-        return 'llama3-70b-8192';
+        return 'llama-3.3-70b-versatile';
     }
 
     getAvailableModels() {
@@ -57,7 +57,7 @@ class FreeLLMInvoiceFormatter {
                 { id: 'mistralai/Mistral-7B-Instruct-v0.1', name: 'Mistral 7B Instruct', cost: 'free' }
             ],
             groq: [
-                { id: 'llama3-70b-8192', name: 'Llama 3 70B (最強推薦)', cost: 'free' },
+                { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (最強推薦)', cost: 'free' },
                 { id: 'llama3-8b-8192', name: 'Llama 3 8B (快速)', cost: 'free' },
                 { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B', cost: 'free' },
                 { id: 'gemma-7b-it', name: 'Gemma 7B IT', cost: 'free' }

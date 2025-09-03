@@ -49,7 +49,7 @@ async function initializeLLM() {
 
     // 設定預設值
     window.freeLLMFormatter.provider = 'groq';
-    window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+    window.freeLLMFormatter.selectedModel = 'llama-3.3-70b-versatile';
     window.freeLLMFormatter.isEnabled = true;
 
     try {
@@ -562,7 +562,7 @@ async function runOCRSpace(imageData) {
                     
                     if (window.freeLLMFormatter) {
                         window.freeLLMFormatter.provider = 'groq';
-                        window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+                        window.freeLLMFormatter.selectedModel = 'llama-3.3-70b-versatile';
                         window.freeLLMFormatter.isEnabled = true;
                         
                         formattedText = await window.freeLLMFormatter.formatInvoiceText(originalText);
@@ -711,7 +711,7 @@ async function runGoogleVision(imageData) {
                     
                     if (window.freeLLMFormatter) {
                         window.freeLLMFormatter.provider = 'groq';
-                        window.freeLLMFormatter.selectedModel = 'llama3-70b-8192';
+                        window.freeLLMFormatter.selectedModel = 'llama-3.3-70b-versatile';
                         window.freeLLMFormatter.isEnabled = true;
                         
                         formattedText = await window.freeLLMFormatter.formatInvoiceText(text);
